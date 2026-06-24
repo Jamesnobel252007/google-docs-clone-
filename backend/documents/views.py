@@ -1,11 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-
+from collaboration.models import Collaborator
 from .models import document
 from .serializers import DocumentSerializer
 from rest_framework.viewsets import ModelViewSet
 from collaboration.permissions import IsOwnerOrCollaborator
 from rest_framework.decorators import action
+from rest_framework.response import Response
+
 
 class DocumentViewSet(ModelViewSet):
     serializer_class = DocumentSerializer
@@ -25,6 +27,12 @@ class DocumentViewSet(ModelViewSet):
         collaborators = Collaborator.objects.filter(document=doc)
 
         return Response({
+
+            "document": {
+        "id": doc.id,
+        "title": doc.title,
+        "content": doc.content,
+    },
             "owner": doc.owner.email,
             "collaborators": [
                 {

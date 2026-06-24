@@ -2,7 +2,9 @@ from django.urls import path
 from .views import (
     ShareDocumentView,
     CollaboratorListView,
-    SharedDocumentsView
+    SharedDocumentsView,
+    UpdateCollaboratorRoleView,
+    RemoveCollaboratorView
 )
 
 urlpatterns = [
@@ -11,5 +13,15 @@ urlpatterns = [
     path(
     "shared-documents/",
     SharedDocumentsView.as_view()
+),
+
+path(
+    "collaborators/<int:pk>/role/",
+    UpdateCollaboratorRoleView.as_view()
+),
+
+path(
+    "collaborators/<int:pk>/remove/",
+    RemoveCollaboratorView.as_view()
 ),
 ]
