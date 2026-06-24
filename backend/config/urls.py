@@ -15,7 +15,7 @@ urlpatterns = [
 
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),
-
+path("api/", include("collaboration.urls")),
     # IMPORTANT: ONLY ONE API ROUTER ENTRY
     path("api/", include(router.urls)),
 ]
