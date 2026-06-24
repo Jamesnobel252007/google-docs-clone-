@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import TiptapEditor from "../components/TiptapEditor";
 
 function Editor() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("Untitled Document");
   const [status, setStatus] = useState("Saved");
@@ -65,6 +66,10 @@ function Editor() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <button style={backBtn} onClick={() => navigate("/dashboard")}>
+            ←
+          </button>
+
           <span style={{ fontSize: "30px" }}>📄</span>
 
           <div>
@@ -110,6 +115,13 @@ function Editor() {
     </div>
   );
 }
+
+const backBtn = {
+  border: "none",
+  background: "transparent",
+  fontSize: "24px",
+  cursor: "pointer",
+};
 
 const btnStyle = {
   padding: "9px 16px",

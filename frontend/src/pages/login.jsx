@@ -1,49 +1,85 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-
 function Login() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const navigate = useNavigate();
-
-    const handleLogin = (e) => {
-        e.preventDefault();
-
-        if (username === "admin" && password === "admin123") {
-            navigate("/dashboard");
-        } else {
-            alert("Invalid username or password");
-        }
-    };
-
     return (
-        <div className="login-page">
-            <form className="login-box" onSubmit={handleLogin}>
-                <h1>Login</h1>
+        <div style={styles.page}>
+            <div style={styles.left}>
+                <h1 style={styles.logo}>VDocs</h1>
+                <h2>Real-Time Collaborative Document Editor</h2>
+                <p>Create, edit, and collaborate on documents in one place.</p>
+            </div>
 
-                <input
-                    type="text"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                />
+            <div style={styles.card}>
+                <h2>Sign in</h2>
 
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                <input style={styles.input} type="text" placeholder="Username" />
+                <input style={styles.input} type="password" placeholder="Password" />
 
-                <button type="submit">Login</button>
+                <button style={styles.button}>Login</button>
 
-                <p>
-                    Don’t have an account?{" "}
-                    <Link to="/register">Create a new account</Link>
+                <p style={styles.text}>
+                    Don’t have an account? <span style={styles.link}>Register</span>
                 </p>
-            </form>
+            </div>
         </div>
     );
 }
+
+const styles = {
+    page: {
+        minHeight: "100vh",
+        display: "flex",
+        background: "#f1f5f9",
+    },
+    left: {
+        flex: 1,
+        background: "linear-gradient(135deg, #1a73e8, #0f172a)",
+        color: "white",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "80px",
+    },
+    logo: {
+        fontSize: "48px",
+        marginBottom: "20px",
+    },
+    card: {
+        width: "380px",
+        background: "white",
+        margin: "auto 90px",
+        padding: "40px",
+        borderRadius: "18px",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+    },
+    input: {
+        width: "100%",
+        padding: "14px",
+        marginTop: "15px",
+        border: "1px solid #d1d5db",
+        borderRadius: "10px",
+        fontSize: "15px",
+        boxSizing: "border-box",
+    },
+    button: {
+        width: "100%",
+        padding: "14px",
+        marginTop: "22px",
+        border: "none",
+        borderRadius: "10px",
+        background: "#1a73e8",
+        color: "white",
+        fontSize: "16px",
+        cursor: "pointer",
+    },
+    text: {
+        marginTop: "20px",
+        textAlign: "center",
+        color: "#64748b",
+    },
+    link: {
+        color: "#1a73e8",
+        fontWeight: "bold",
+        cursor: "pointer",
+    },
+};
 
 export default Login;
