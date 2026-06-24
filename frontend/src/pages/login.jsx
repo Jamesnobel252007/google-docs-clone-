@@ -1,8 +1,18 @@
+import vdartLogo from "../assets/vdart-logo.png";
+
 function Login() {
     return (
         <div style={styles.page}>
             <div style={styles.left}>
-                <h1 style={styles.logo}>VDocs</h1>
+                <div style={styles.brandRow}>
+                    <img
+                        src={vdartLogo}
+                        alt="VDart Logo"
+                        style={styles.logoImage}
+                    />
+                    <h1 style={styles.logo}>VDocs</h1>
+                </div>
+
                 <h2>Real-Time Collaborative Document Editor</h2>
                 <p>Create, edit, and collaborate on documents in one place.</p>
             </div>
@@ -29,6 +39,7 @@ const styles = {
         display: "flex",
         background: "#f1f5f9",
     },
+
     left: {
         flex: 1,
         background: "linear-gradient(135deg, #1a73e8, #0f172a)",
@@ -38,10 +49,26 @@ const styles = {
         justifyContent: "center",
         padding: "80px",
     },
-    logo: {
-        fontSize: "48px",
+
+    brandRow: {
+        display: "flex",
+        alignItems: "center",
+        gap: "18px",
         marginBottom: "20px",
     },
+
+    logoImage: {
+        width: "90px",
+        height: "90px",
+        objectFit: "contain",
+    },
+
+    logo: {
+        fontSize: "64px",
+        color: "white",
+        margin: 0,
+    },
+
     card: {
         width: "380px",
         background: "white",
@@ -50,6 +77,7 @@ const styles = {
         borderRadius: "18px",
         boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
     },
+
     input: {
         width: "100%",
         padding: "14px",
@@ -59,6 +87,7 @@ const styles = {
         fontSize: "15px",
         boxSizing: "border-box",
     },
+
     button: {
         width: "100%",
         padding: "14px",
@@ -70,11 +99,13 @@ const styles = {
         fontSize: "16px",
         cursor: "pointer",
     },
+
     text: {
         marginTop: "20px",
         textAlign: "center",
         color: "#64748b",
     },
+
     link: {
         color: "#1a73e8",
         fontWeight: "bold",

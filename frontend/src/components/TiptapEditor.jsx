@@ -37,119 +37,226 @@ function TiptapEditor({ content, setContent, setStatus }) {
   if (!editor) return null;
 
   return (
-    <div>
-      <div style={toolbarStyle}>
+    <div style={styles.wrapper}>
+      <div style={styles.toolbar}>
         <select
-          style={selectStyle}
+          style={styles.select}
           defaultValue="Arial"
           onChange={(e) =>
             editor.chain().focus().setFontFamily(e.target.value).run()
           }
         >
           <option value="Arial">Arial</option>
-          <option value="Times New Roman">Times New Roman</option>
+          <option value="Inter">Inter</option>
           <option value="Georgia">Georgia</option>
           <option value="Verdana">Verdana</option>
           <option value="Courier New">Courier New</option>
-          <option value="Trebuchet MS">Trebuchet MS</option>
-          <option value="Tahoma">Tahoma</option>
         </select>
 
         <select
-          style={selectStyle}
+          style={styles.select}
           defaultValue="paragraph"
           onChange={(e) => {
-            if (e.target.value === "paragraph") editor.chain().focus().setParagraph().run();
-            if (e.target.value === "h1") editor.chain().focus().toggleHeading({ level: 1 }).run();
-            if (e.target.value === "h2") editor.chain().focus().toggleHeading({ level: 2 }).run();
+            if (e.target.value === "paragraph") {
+              editor.chain().focus().setParagraph().run();
+            }
+            if (e.target.value === "h1") {
+              editor.chain().focus().toggleHeading({ level: 1 }).run();
+            }
+            if (e.target.value === "h2") {
+              editor.chain().focus().toggleHeading({ level: 2 }).run();
+            }
           }}
         >
           <option value="paragraph">Normal</option>
-          <option value="h1">Heading 1</option>
-          <option value="h2">Heading 2</option>
+          <option value="h1">Title</option>
+          <option value="h2">Subtitle</option>
         </select>
 
-        <button style={editor.isActive("bold") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleBold().run()}>B</button>
-        <button style={editor.isActive("italic") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleItalic().run()}>I</button>
-        <button style={editor.isActive("underline") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleUnderline().run()}>U</button>
+        <div style={styles.divider}></div>
 
-        <input type="color" style={colorInputStyle} onChange={(e) => editor.chain().focus().setColor(e.target.value).run()} />
+        <button
+          style={editor.isActive("bold") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        >
+          B
+        </button>
 
-        <button style={editor.isActive("highlight") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleHighlight().run()}>Highlight</button>
+        <button
+          style={editor.isActive("italic") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        >
+          I
+        </button>
 
-        <button style={align === "left" ? activeBtn : toolBtn} onClick={() => { setAlign("left"); editor.chain().focus().setTextAlign("left").run(); }}>L</button>
-        <button style={align === "center" ? activeBtn : toolBtn} onClick={() => { setAlign("center"); editor.chain().focus().setTextAlign("center").run(); }}>C</button>
-        <button style={align === "right" ? activeBtn : toolBtn} onClick={() => { setAlign("right"); editor.chain().focus().setTextAlign("right").run(); }}>R</button>
+        <button
+          style={editor.isActive("underline") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        >
+          U
+        </button>
 
-        <button style={editor.isActive("bulletList") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</button>
-        <button style={editor.isActive("orderedList") ? activeBtn : toolBtn} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</button>
+        <input
+          type="color"
+          style={styles.color}
+          onChange={(e) =>
+            editor.chain().focus().setColor(e.target.value).run()
+          }
+        />
 
-        <button style={toolBtn} onClick={() => editor.chain().focus().undo().run()}>Undo</button>
-        <button style={toolBtn} onClick={() => editor.chain().focus().redo().run()}>Redo</button>
+        <button
+          style={editor.isActive("highlight") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+        >
+          Mark
+        </button>
+
+        <div style={styles.divider}></div>
+
+        <button
+          style={align === "left" ? styles.activeBtn : styles.toolBtn}
+          onClick={() => {
+            setAlign("left");
+            editor.chain().focus().setTextAlign("left").run();
+          }}
+        >
+          L
+        </button>
+
+        <button
+          style={align === "center" ? styles.activeBtn : styles.toolBtn}
+          onClick={() => {
+            setAlign("center");
+            editor.chain().focus().setTextAlign("center").run();
+          }}
+        >
+          C
+        </button>
+
+        <button
+          style={align === "right" ? styles.activeBtn : styles.toolBtn}
+          onClick={() => {
+            setAlign("right");
+            editor.chain().focus().setTextAlign("right").run();
+          }}
+        >
+          R
+        </button>
+
+        <button
+          style={editor.isActive("bulletList") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        >
+          •
+        </button>
+
+        <button
+          style={editor.isActive("orderedList") ? styles.activeBtn : styles.toolBtn}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        >
+          1.
+        </button>
+
+        <div style={styles.divider}></div>
+
+        <button
+          style={styles.toolBtn}
+          onClick={() => editor.chain().focus().undo().run()}
+        >
+          Undo
+        </button>
+
+        <button
+          style={styles.toolBtn}
+          onClick={() => editor.chain().focus().redo().run()}
+        >
+          Redo
+        </button>
       </div>
 
-      <div style={paperStyle}>
+      <div style={styles.paper}>
         <EditorContent editor={editor} />
       </div>
     </div>
   );
 }
 
-const toolbarStyle = {
-  width: "920px",
-  margin: "0 auto 20px auto",
-  background: "white",
-  padding: "12px",
-  borderRadius: "12px",
-  boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
-  display: "flex",
-  gap: "8px",
-  flexWrap: "wrap",
-  alignItems: "center",
-};
-
-const toolBtn = {
-  padding: "8px 13px",
-  border: "1px solid #9ca3af",
-  background: "#f8fafc",
-  borderRadius: "7px",
-  cursor: "pointer",
-  color: "#202124",
-  fontWeight: "600",
-};
-
-const activeBtn = {
-  ...toolBtn,
-  background: "#1a73e8",
-  color: "white",
-  border: "1px solid #1a73e8",
-};
-
-const selectStyle = {
-  padding: "7px 10px",
-  border: "1px solid #dadce0",
-  borderRadius: "6px",
-  background: "white",
-  color: "#202124",
-};
-
-const colorInputStyle = {
-  width: "38px",
-  height: "34px",
-  cursor: "pointer",
-};
-
-const paperStyle = {
-  width: "820px",
-  minHeight: "900px",
-  margin: "0 auto",
-  background: "white",
-  padding: "70px",
-  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
-  borderRadius: "4px",
-  color: "#202124",
-  fontSize: "18px",
-  lineHeight: "1.7",
+const styles = {
+  wrapper: {
+    width: "100%",
+  },
+  toolbar: {
+    width: "fit-content",
+    maxWidth: "95%",
+    margin: "0 auto 24px auto",
+    background: "rgba(255,255,255,0.95)",
+    padding: "12px 14px",
+    borderRadius: "18px",
+    boxShadow: "0 10px 30px rgba(15,23,42,0.10)",
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    alignItems: "center",
+    position: "sticky",
+    top: "18px",
+    zIndex: 10,
+    border: "1px solid #e5e7eb",
+  },
+  select: {
+    padding: "9px 12px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "10px",
+    background: "#f8fafc",
+    color: "#111827",
+    fontSize: "14px",
+    outline: "none",
+  },
+  toolBtn: {
+    padding: "9px 12px",
+    border: "1px solid #e5e7eb",
+    background: "#f8fafc",
+    borderRadius: "10px",
+    cursor: "pointer",
+    color: "#111827",
+    fontWeight: "600",
+    fontSize: "14px",
+  },
+  activeBtn: {
+    padding: "9px 12px",
+    border: "1px solid #2563eb",
+    background: "#2563eb",
+    borderRadius: "10px",
+    cursor: "pointer",
+    color: "white",
+    fontWeight: "600",
+    fontSize: "14px",
+  },
+  color: {
+    width: "38px",
+    height: "38px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "10px",
+    cursor: "pointer",
+    background: "#f8fafc",
+  },
+  divider: {
+    width: "1px",
+    height: "28px",
+    background: "#e5e7eb",
+  },
+  paper: {
+    width: "820px",
+    minHeight: "920px",
+    margin: "0 auto",
+    background: "#ffffff",
+    padding: "72px",
+    borderRadius: "18px",
+    boxShadow: "0 18px 45px rgba(15,23,42,0.12)",
+    color: "#111827",
+    fontSize: "18px",
+    lineHeight: "1.8",
+    outline: "none",
+  },
 };
 
 export default TiptapEditor;
