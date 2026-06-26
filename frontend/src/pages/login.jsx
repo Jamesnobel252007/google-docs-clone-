@@ -34,163 +34,262 @@ function Login() {
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.card}>
-                {/* Header / Logo Section */}
-                <div style={styles.header}>
+        <div style={styles.page}>
+            <div style={styles.sidebar}>
+                <div style={styles.logoRow}>
                     <img src={vdartLogo} alt="VDart Logo" style={styles.logoImage} />
-                    <h2 style={styles.brandName}>VDocs</h2>
+                    <h1 style={styles.logoText}>VDocs</h1>
                 </div>
 
-                <div style={styles.greeting}>
-                    <h3 style={styles.welcomeText}>Welcome back</h3>
-                    <p style={styles.subtitle}>Please enter your details to sign in.</p>
+                <h2 style={styles.heroTitle}>Your workspace for smarter documents.</h2>
+
+                <p style={styles.heroText}>
+                    Create, edit, organize, and collaborate on documents from a clean
+                    productivity dashboard.
+                </p>
+
+                <div style={styles.previewCard}>
+                    <div style={styles.previewTop}>
+                        <span style={styles.dot}></span>
+                        <span style={styles.dot}></span>
+                        <span style={styles.dot}></span>
+                    </div>
+                    <div style={styles.previewLineBig}></div>
+                    <div style={styles.previewLine}></div>
+                    <div style={styles.previewLineSmall}></div>
                 </div>
+            </div>
 
-                {/* Form Section */}
-                <div style={styles.form}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Username</label>
-                        <input
-                            style={styles.input}
-                            type="text"
-                            placeholder="Enter your username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                        />
-                    </div>
-
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Password</label>
-                        <input
-                            style={styles.input}
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-
-                    <button style={styles.button} onClick={handleLogin}>
-                        Sign In
+            <div style={styles.main}>
+                <div style={styles.topRight}>
+                    <span style={styles.muted}>New here?</span>
+                    <button style={styles.secondaryBtn} onClick={() => navigate("/register")}>
+                        Create account
                     </button>
                 </div>
 
-                {/* Footer Section */}
-                <p style={styles.footerText}>
-                    Don’t have an account?{" "}
-                    <span style={styles.link} onClick={() => navigate("/register")}>
-                        Create one now
-                    </span>
-                </p>
+                <div style={styles.card}>
+                    <p style={styles.kicker}>Welcome back</p>
+                    <h2 style={styles.title}>Sign in to continue</h2>
+                    <p style={styles.desc}>Access your VDocs workspace securely.</p>
+
+                    <label style={styles.label}>Username</label>
+                    <input
+                        style={styles.input}
+                        type="text"
+                        placeholder="admin / user"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                    />
+
+                    <label style={styles.label}>Password</label>
+                    <input
+                        style={styles.input}
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+
+                    <button style={styles.primaryBtn} onClick={handleLogin}>
+                        Sign in
+                    </button>
+
+                    <div style={styles.testBox}>
+                        Demo: <b>admin</b> / <b>admin123</b> or <b>user</b> / <b>user123</b>
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
 const styles = {
-    container: {
+    page: {
         minHeight: "100vh",
+        display: "grid",
+        gridTemplateColumns: "46% 54%",
+        background: "#f8fafc",
+        fontFamily: "Inter, Arial, sans-serif",
+    },
+    sidebar: {
+        background:
+            "linear-gradient(145deg, #0f172a 0%, #111827 45%, #1e293b 100%)",
+        color: "white",
+        padding: "70px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        position: "relative",
+        overflow: "hidden",
+    },
+    logoRow: {
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%)",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    },
-    card: {
-        width: "100%",
-        maxWidth: "440px",
-        background: "white",
-        padding: "48px",
-        borderRadius: "24px",
-        boxShadow: "0 10px 40px rgba(0, 0, 0, 0.08)",
-        boxSizing: "border-box",
-    },
-    header: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "12px",
-        marginBottom: "32px",
+        gap: "18px",
+        marginBottom: "52px",
     },
     logoImage: {
-        width: "48px",
-        height: "48px",
+        width: "82px",
+        height: "82px",
         objectFit: "contain",
     },
-    brandName: {
-        fontSize: "28px",
-        fontWeight: "800",
-        color: "#1a73e8",
+    logoText: {
+        fontSize: "48px",
+        margin: 0,
+        fontWeight: "900",
+        letterSpacing: "-2px",
+    },
+    heroTitle: {
+        fontSize: "54px",
+        lineHeight: "1.05",
+        maxWidth: "600px",
+        margin: "0 0 22px",
+        letterSpacing: "-2px",
+        color: "#ffffff",   // add this
+        fontWeight: "900",
+    },
+    heroText: {
+        fontSize: "19px",
+        lineHeight: "1.7",
+        color: "#e2e8f0",
+        maxWidth: "560px",
         margin: 0,
     },
-    greeting: {
-        textAlign: "center",
-        marginBottom: "32px",
+    previewCard: {
+        marginTop: "48px",
+        width: "430px",
+        padding: "24px",
+        borderRadius: "22px",
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        boxShadow: "0 24px 70px rgba(0,0,0,0.35)",
     },
-    welcomeText: {
-        fontSize: "24px",
-        fontWeight: "700",
-        color: "#102a43",
-        margin: "0 0 8px 0",
-    },
-    subtitle: {
-        fontSize: "15px",
-        color: "#627d98",
-        margin: 0,
-    },
-    form: {
+    previewTop: {
         display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-    },
-    inputGroup: {
-        display: "flex",
-        flexDirection: "column",
         gap: "8px",
+        marginBottom: "28px",
+    },
+    dot: {
+        width: "10px",
+        height: "10px",
+        borderRadius: "50%",
+        background: "#60a5fa",
+    },
+    previewLineBig: {
+        height: "18px",
+        width: "78%",
+        borderRadius: "999px",
+        background: "rgba(255,255,255,0.75)",
+        marginBottom: "16px",
+    },
+    previewLine: {
+        height: "12px",
+        width: "92%",
+        borderRadius: "999px",
+        background: "rgba(255,255,255,0.35)",
+        marginBottom: "12px",
+    },
+    previewLineSmall: {
+        height: "12px",
+        width: "62%",
+        borderRadius: "999px",
+        background: "rgba(255,255,255,0.28)",
+    },
+    main: {
+        position: "relative",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "60px",
+    },
+    topRight: {
+        position: "absolute",
+        top: "34px",
+        right: "46px",
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
+    },
+    muted: {
+        color: "#64748b",
+        fontSize: "15px",
+    },
+    secondaryBtn: {
+        border: "1px solid #dbe3ef",
+        background: "white",
+        color: "#0f172a",
+        padding: "10px 16px",
+        borderRadius: "12px",
+        cursor: "pointer",
+        fontWeight: "700",
+    },
+    card: {
+        width: "430px",
+        background: "white",
+        border: "1px solid #e5e7eb",
+        borderRadius: "28px",
+        padding: "44px",
+        boxShadow: "0 30px 80px rgba(15,23,42,0.12)",
+    },
+    kicker: {
+        margin: "0 0 10px",
+        color: "#2563eb",
+        fontSize: "14px",
+        fontWeight: "800",
+        textTransform: "uppercase",
+        letterSpacing: "1px",
+    },
+    title: {
+        margin: "0 0 10px",
+        color: "#0f172a",
+        fontSize: "38px",
+        letterSpacing: "-1px",
+    },
+    desc: {
+        margin: "0 0 28px",
+        color: "#64748b",
+        fontSize: "16px",
     },
     label: {
+        display: "block",
+        margin: "16px 0 8px",
+        color: "#334155",
         fontSize: "14px",
-        fontWeight: "600",
-        color: "#334e68",
+        fontWeight: "800",
     },
     input: {
         width: "100%",
-        padding: "14px 16px",
-        border: "1px solid #bcccdc",
-        borderRadius: "10px",
-        fontSize: "15px",
-        color: "#102a43",
-        outline: "none",
-        transition: "border-color 0.2s",
-        boxSizing: "border-box",
-        backgroundColor: "#f0f4f8",
-    },
-    button: {
-        width: "100%",
         padding: "16px",
-        marginTop: "10px",
-        border: "none",
-        borderRadius: "10px",
-        background: "#1a73e8",
-        color: "white",
+        borderRadius: "14px",
+        border: "1px solid #dbe3ef",
+        background: "#f8fafc",
+        color: "#0f172a",
         fontSize: "16px",
-        fontWeight: "700",
-        cursor: "pointer",
-        transition: "background 0.2s, transform 0.1s",
-        boxShadow: "0 4px 14px rgba(26, 115, 232, 0.3)",
+        outline: "none",
+        boxSizing: "border-box",
     },
-    footerText: {
-        marginTop: "32px",
-        textAlign: "center",
-        color: "#627d98",
+    primaryBtn: {
+        width: "100%",
+        marginTop: "28px",
+        padding: "16px",
+        border: "none",
+        borderRadius: "14px",
+        background: "#0f172a",
+        color: "white",
+        fontSize: "17px",
+        fontWeight: "900",
+        cursor: "pointer",
+        boxShadow: "0 16px 36px rgba(15,23,42,0.24)",
+    },
+    testBox: {
+        marginTop: "20px",
+        padding: "13px",
+        borderRadius: "14px",
+        background: "#f1f5f9",
+        color: "#475569",
         fontSize: "14px",
-    },
-    link: {
-        color: "#1a73e8",
-        fontWeight: "700",
-        cursor: "pointer",
-        textDecoration: "none",
+        textAlign: "center",
     },
 };
 
