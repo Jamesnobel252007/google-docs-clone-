@@ -13,6 +13,7 @@ function Editor() {
 
   useEffect(() => {
     const savedDoc = JSON.parse(localStorage.getItem(`doc-${id}`));
+
     if (savedDoc) {
       setTitle(savedDoc.title);
       setContent(savedDoc.content);
@@ -20,7 +21,15 @@ function Editor() {
   }, [id]);
 
   const saveToLocalStorage = () => {
-    const docData = { id, title, content, updatedAt: new Date().toLocaleString() };
+    const now = new Date().toLocaleString();
+
+    const docData = {
+      id,
+      title,
+      content,
+      updatedAt: now,
+    };
+
     localStorage.setItem(`doc-${id}`, JSON.stringify(docData));
 
     let docs = JSON.parse(localStorage.getItem("documents-list")) || [];
@@ -29,8 +38,14 @@ function Editor() {
     if (existingIndex !== -1) {
       docs[existingIndex].title = title;
       docs[existingIndex].date = "Today";
+      docs[existingIndex].lastEdited = now;
     } else {
-      docs.unshift({ id: Number(id), title, date: "Today" });
+      docs.unshift({
+        id: Number(id),
+        title,
+        date: "Today",
+        lastEdited: now,
+      });
     }
 
     localStorage.setItem("documents-list", JSON.stringify(docs));
@@ -44,8 +59,10 @@ function Editor() {
 
   const shareDocument = () => {
     saveToLocalStorage();
+
     const shareLink = `${window.location.origin}/share/${id}`;
     navigator.clipboard.writeText(shareLink);
+
     alert("Share link copied to clipboard!");
   };
 
@@ -82,6 +99,7 @@ function Editor() {
 
     if (type === "csv") {
       const csvContent = `Title,Content\n"${fileName}","${getPlainText()}"`;
+
       const blob = new Blob([csvContent], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -134,6 +152,7 @@ function Editor() {
               }}
               style={titleInput}
             />
+
             <p style={statusText}>{status}</p>
           </div>
         </div>
@@ -168,7 +187,11 @@ function Editor() {
       </div>
 
       <div style={{ padding: "42px 35px" }}>
-        <TiptapEditor content={content} setContent={setContent} setStatus={setStatus} />
+        <TiptapEditor
+          content={content}
+          setContent={setContent}
+          setStatus={setStatus}
+        />
       </div>
     </div>
   );

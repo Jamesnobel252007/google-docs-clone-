@@ -8,6 +8,9 @@ function Dashboard() {
 
   const navigate = useNavigate();
 
+  const loggedInUser =
+    JSON.parse(localStorage.getItem("loggedInUser")) || { username: "User" };
+
   useEffect(() => {
     const savedDocuments =
       JSON.parse(localStorage.getItem("documents-list")) || [];
@@ -21,10 +24,13 @@ function Dashboard() {
   };
 
   const createDocument = () => {
+    const now = new Date().toLocaleString();
+
     const newDoc = {
       id: Date.now(),
       title: "Untitled Document",
       date: "Today",
+      lastEdited: now,
     };
 
     const updatedDocs = [newDoc, ...documents];
@@ -36,7 +42,7 @@ function Dashboard() {
         id: newDoc.id,
         title: newDoc.title,
         content: "<p></p>",
-        updatedAt: new Date().toLocaleString(),
+        updatedAt: now,
       })
     );
 
@@ -52,6 +58,43 @@ function Dashboard() {
       updateDocuments(updatedDocs);
       localStorage.removeItem(`doc-${id}`);
     }
+  };
+
+  const renameDocument = (e, id) => {
+    e.stopPropagation();
+
+    const currentDoc = documents.find((doc) => doc.id === id);
+    const newTitle = prompt("Enter new document name", currentDoc.title);
+
+    if (!newTitle || newTitle.trim() === "") return;
+
+    const now = new Date().toLocaleString();
+
+    const updatedDocs = documents.map((doc) =>
+      doc.id === id
+        ? { ...doc, title: newTitle.trim(), lastEdited: now }
+        : doc
+    );
+
+    updateDocuments(updatedDocs);
+
+    const savedDoc = JSON.parse(localStorage.getItem(`doc-${id}`));
+
+    if (savedDoc) {
+      localStorage.setItem(
+        `doc-${id}`,
+        JSON.stringify({
+          ...savedDoc,
+          title: newTitle.trim(),
+          updatedAt: now,
+        })
+      );
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("loggedInUser");
+    navigate("/");
   };
 
   const filteredDocuments = documents.filter((doc) =>
@@ -110,22 +153,41 @@ function Dashboard() {
           }}
         />
 
-        <div
-          style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "50%",
-            backgroundColor: "#4285F4",
-            color: "white",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            fontWeight: "bold",
-            fontSize: "20px",
-            boxShadow: "0 4px 12px rgba(66,133,244,0.35)",
-          }}
-        >
-          S
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div
+            title={loggedInUser.username}
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              backgroundColor: "#4285F4",
+              color: "white",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              fontWeight: "bold",
+              fontSize: "20px",
+              boxShadow: "0 4px 12px rgba(66,133,244,0.35)",
+              textTransform: "uppercase",
+            }}
+          >
+            {loggedInUser.username.charAt(0)}
+          </div>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              border: "none",
+              background: "#ef4444",
+              color: "white",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
 
@@ -147,13 +209,16 @@ function Dashboard() {
           <p style={{ color: "#202124", marginBottom: "18px" }}>🏠 Home</p>
           <p style={{ color: "#202124", marginBottom: "18px" }}>📄 Documents</p>
           <p style={{ color: "#202124", marginBottom: "18px" }}>⚙️ Settings</p>
+          <p style={{ color: "#202124", marginTop: "30px" }}>
+            Logged in as: <b>{loggedInUser.username}</b>
+          </p>
         </div>
       )}
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "320px 1fr",
+          gridTemplateColumns: "360px 1fr",
           gap: "20px",
           padding: "45px 40px",
           alignItems: "start",
@@ -174,16 +239,13 @@ function Dashboard() {
               onClick={() => navigate(`/editor/${doc.id}`)}
               style={{
                 backgroundColor: "white",
-                padding: "10px 14px",
-                marginBottom: "6px",
+                padding: "12px 14px",
+                marginBottom: "8px",
                 borderRadius: "12px",
                 border: "1px solid #e0e3e7",
                 cursor: "pointer",
                 boxShadow: "0 3px 10px rgba(0,0,0,0.04)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                minHeight: "72px",
+                minHeight: "92px",
               }}
             >
               <div>
@@ -192,27 +254,54 @@ function Dashboard() {
                     color: "#202124",
                     fontWeight: "600",
                     fontSize: "15px",
+                    margin: "0 0 6px 0",
                   }}
                 >
                   {doc.title}
                 </p>
-                <small style={{ color: "#5f6368" }}>{doc.date}</small>
+
+                <small style={{ color: "#5f6368", display: "block" }}>
+                  Last edited: {doc.lastEdited || doc.date || "Not edited"}
+                </small>
               </div>
 
-              <button
-                onClick={(e) => deleteDocument(e, doc.id)}
+              <div
                 style={{
-                  border: "none",
-                  background: "#fee2e2",
-                  color: "#b91c1c",
-                  padding: "6px 9px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "13px",
+                  marginTop: "12px",
+                  display: "flex",
+                  gap: "8px",
                 }}
               >
-                Delete
-              </button>
+                <button
+                  onClick={(e) => renameDocument(e, doc.id)}
+                  style={{
+                    border: "none",
+                    background: "#dbeafe",
+                    color: "#1d4ed8",
+                    padding: "6px 9px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  Rename
+                </button>
+
+                <button
+                  onClick={(e) => deleteDocument(e, doc.id)}
+                  style={{
+                    border: "none",
+                    background: "#fee2e2",
+                    color: "#b91c1c",
+                    padding: "6px 9px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -224,7 +313,6 @@ function Dashboard() {
             padding: "70px",
             boxShadow: "0 8px 28px rgba(0,0,0,0.08)",
             textAlign: "center",
-           
             width: "650px",
             height: "400px",
             margin: "0 auto",
