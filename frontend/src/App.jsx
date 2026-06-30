@@ -5,10 +5,12 @@ import Editor from "./pages/Editor";
 import Register from "./pages/register";
 import Documents from "./pages/Documents";
 
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/documents" element={<Documents />} />
@@ -18,5 +20,6 @@ function App() {
     </BrowserRouter>
   );
 }
+import Header from "./components/Header";
 
 export default App;
