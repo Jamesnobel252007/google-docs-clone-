@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import api from '../api/api';
 
 function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
 
-        if (username === "admin" && password === "admin123") {
+        try {
+            const response = await api.post("token/", {
+                username,
+                password,
+            });
+            localStorage.setItem("access", response.data.access);
+            localStorage.setItem("refresh", response.data.refresh);
+
             navigate("/dashboard");
-        } else {
+        } catch (error) {
             alert("Invalid username or password");
         }
     };
@@ -27,8 +35,8 @@ function Login() {
             </div>
 
             {/* Main Form Box Container */}
-            <form 
-                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col" 
+            <form
+                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col"
                 onSubmit={handleLogin}
             >
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Sign in</h1>
@@ -57,7 +65,7 @@ function Login() {
                 </div>
 
                 {/* Submit Action Button */}
-                <button 
+                <button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm shadow-blue-200 transition-all active:scale-[0.99] mb-6"
                     type="submit"
                 >
@@ -67,15 +75,15 @@ function Login() {
                 {/* Redirection Link Area */}
                 <p className="text-center text-xs md:text-sm text-slate-500 font-medium">
                     Don’t have an account?{" "}
-                    <Link 
-                        to="/register" 
+                    <Link
+                        to="/register"
                         className="text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-4 transition"
                     >
                         Create a new account
                     </Link>
                 </p>
             </form>
-            
+
             {/* Soft Footer Detail */}
             <div className="mt-8 text-xs text-slate-400 font-medium tracking-wide">
                 &copy; 2026 VDocs Suite

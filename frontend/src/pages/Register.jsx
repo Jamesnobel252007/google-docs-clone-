@@ -1,16 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import api from '../api/api';
 function Register() {
     const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleRegister = (e) => {
-        e.preventDefault();
-        alert("Account Created Successfully!");
+    const handleRegister = async (e) => {
+    e.preventDefault();
+
+    try {
+        const response = await api.post("users/register/", {
+            username,
+            email,
+            password,
+        });
+
+        console.log(response.data);
+
+        alert("Account created successfully!");
+
         navigate("/");
-    };
+    } catch (error) {
+        console.error(error.response?.data);
+
+        alert("Registration failed.: " + error.response?.data);
+    }
+};
 
     return (
         <div className="min-h-screen bg-[#F9FBFD] flex flex-col items-center justify-center p-4 font-sans antialiased selection:bg-blue-100">
@@ -23,8 +40,8 @@ function Register() {
             </div>
 
             {/* Main Form Box Container */}
-            <form 
-                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col" 
+            <form
+                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col"
                 onSubmit={handleRegister}
             >
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Create an account</h1>
@@ -40,6 +57,16 @@ function Register() {
                         onChange={(e) => setUsername(e.target.value)}
                     />
                 </div>
+                {/* Email Input */}
+                <div className="mb-4">
+                    <input
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+                </div>
 
                 {/* Password Input */}
                 <div className="mb-6">
@@ -53,7 +80,7 @@ function Register() {
                 </div>
 
                 {/* Submit Action Button */}
-                <button 
+                <button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm shadow-blue-200 transition-all active:scale-[0.99] mb-4"
                     type="submit"
                 >
@@ -69,7 +96,7 @@ function Register() {
                     Already have an account? Sign in
                 </button>
             </form>
-            
+
             {/* Soft Footer Detail */}
             <div className="mt-8 text-xs text-slate-400 font-medium tracking-wide">
                 &copy; 2026 VDocs Suite
