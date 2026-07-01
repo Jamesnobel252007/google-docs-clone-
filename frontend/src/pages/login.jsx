@@ -8,7 +8,7 @@ function Login() {
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
-        e.preventDefault();
+        e.preventDefault();     
 
         try {
             const response = await api.post("token/", {
