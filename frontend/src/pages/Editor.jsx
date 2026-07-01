@@ -6,15 +6,42 @@ import api from "../api/api";
 function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const [sharing, setSharing] = useState(false);
   const [title, setTitle] = useState("Untitled Document");
   const [status, setStatus] = useState("Saved");
   const [content, setContent] = useState("<p></p>");
-
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareRole, setShareRole] = useState("viewer");
 
   useEffect(() => {
     fetchDocument();
   }, [id]);
+
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      setShowShareModal(false);
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, []);
+
+  useEffect(() => {
+    if (status !== "Unsaved changes") return;
+
+    const timer = setTimeout(() => {
+      saveDocument();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [content, title]);
+
 
   const fetchDocument = async () => {
     try {
@@ -28,166 +55,243 @@ function Editor() {
     }
   };
 
+  const shareDocument = async () => {
+    if (!shareEmail.trim()) return;
+
+    setSharing(true);
+
+    try {
+      await api.post("share/", {
+        document_id: id,
+        email: shareEmail,
+        role: shareRole,
+      });
+
+      alert("Document shared successfully!");
+
+      setShowShareModal(false);
+      setShareEmail("");
+      setShareRole("viewer");
+    } catch (err) {
+      alert(err.response?.data?.error || "Unable to share");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const saveDocument = async () => {
 
-    try{
+    try {
+      setStatus("Saving...");
+      await api.patch(`documents/${id}/`, {
+        title,
+        content,
+      });
 
-        await api.patch(`documents/${id}/`,{
-            title,
-            content,
-        });
+      setStatus("Saved");
 
-        setStatus("Saved");
-
-    }catch(err){
-        console.error(err);
+    } catch (err) {
+      console.error(err);
     }
 
-}
+  }
+
+  const exportDocument = (type) => {
+    switch (type) {
+      case "html":
+        alert("HTML export coming soon.");
+        break;
+
+      case "csv":
+        alert("CSV export coming soon.");
+        break;
+
+      case "excel":
+        alert("Excel export coming soon.");
+        break;
+
+      default:
+        break;
+    }
+  };
+
+
   return (
-    <div style={{ minHeight: "100vh", background: "#eef4fb" }}>
-      <div style={headerStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button style={backBtn} onClick={() => navigate("/dashboard")}>
+    <div className="min-h-screen bg-[#F4F7FB]">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
+
+        {/* Left */}
+        <div className="flex items-center gap-5">
+
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition"
+          >
             ←
           </button>
 
-          <div style={docIcon}>📄</div>
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
+            📄
+          </div>
 
           <div>
+
             <input
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
                 setStatus("Unsaved changes");
               }}
-              style={titleInput}
+              className="text-2xl font-bold bg-transparent outline-none border-none text-slate-800"
             />
 
-            <p style={statusText}>{status}</p>
+            <p
+              className={`text-xs mt-1 font-medium ${status === "Saved"
+                ? "text-emerald-500"
+                : "text-orange-500"
+                }`}
+            >
+              {status}
+            </p>
+
           </div>
+
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button style={btnStyle} onClick={shareDocument}>
+        {/* Right */}
+        <div className="flex items-center gap-3">
+
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+          >
             Share
           </button>
 
-          <button style={btnBlue} onClick={saveDocument}>
+          <button
+            onClick={saveDocument}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition"
+          >
             Save
           </button>
 
           <select
-            style={btnStyle}
             defaultValue=""
             onChange={(e) => {
               exportDocument(e.target.value);
               e.target.value = "";
             }}
+            className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm outline-none hover:bg-slate-50"
           >
             <option value="" disabled>
               Export
             </option>
-            <option value="html">Export as HTML</option>
-            <option value="csv">Export as CSV</option>
-            <option value="excel">Export as Excel</option>
+
+            <option value="html">
+              HTML
+            </option>
+
+            <option value="csv">
+              CSV
+            </option>
+
+            <option value="excel">
+              Excel
+            </option>
+
           </select>
 
-          <div style={profileStyle}>S</div>
-        </div>
-      </div>
+          <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow">
+            S
+          </div>
 
-      <div style={{ padding: "42px 35px" }}>
-        <TiptapEditor
-          content={content}
-          setContent={setContent}
-          setStatus={setStatus}
-        />
-      </div>
+        </div>
+
+      </header>
+
+      {/* Editor Body */}
+
+      <main className="py-10 px-6">
+
+        <div className="max-w-5xl mx-auto">
+
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 min-h-[85vh] p-10">
+
+            <TiptapEditor
+              content={content}
+              setContent={setContent}
+              setStatus={setStatus}
+            />
+
+          </div>
+
+        </div>
+
+      </main>
+
+      {showShareModal && (
+        <div
+  className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+  onClick={() => setShowShareModal(false)}
+>
+          <div
+  className="bg-white rounded-xl w-[420px] p-6 shadow-xl"
+  onClick={(e) => e.stopPropagation()}
+>
+
+            <h2 className="text-2xl font-bold text-slate-800">
+              Share Document
+            </h2>
+
+            <p className="text-sm text-slate-500 mt-1 mb-6">
+              Invite collaborators to edit or view this document.
+            </p>
+
+            <input
+              type="email"
+              value={shareEmail}
+              onChange={(e) => setShareEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  shareDocument();
+                }
+              }}
+            />
+            <select
+              value={shareRole}
+              onChange={(e) => setShareRole(e.target.value)}
+              className="w-full border rounded-lg px-4 py-2 mb-6"
+            >
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="px-4 py-2 rounded-lg border"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={shareDocument}
+                className="px-5 py-2 rounded-lg bg-blue-600 text-white"
+              >
+                Share
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const headerStyle = {
-  height: "78px",
-  background: "rgba(255,255,255,0.9)",
-  backdropFilter: "blur(12px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "0 36px",
-  boxShadow: "0 8px 30px rgba(15,23,42,0.08)",
-  borderBottom: "1px solid #e5e7eb",
-  position: "sticky",
-  top: 0,
-  zIndex: 100,
-};
 
-const backBtn = {
-  border: "none",
-  background: "transparent",
-  fontSize: "26px",
-  cursor: "pointer",
-  color: "#111827",
-};
-
-const docIcon = {
-  width: "44px",
-  height: "44px",
-  borderRadius: "12px",
-  background: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "24px",
-};
-
-const titleInput = {
-  border: "none",
-  outline: "none",
-  fontSize: "20px",
-  fontWeight: "700",
-  color: "#111827",
-  background: "transparent",
-};
-
-const statusText = {
-  color: "#64748b",
-  fontSize: "13px",
-  margin: "4px 0 0 0",
-};
-
-const btnStyle = {
-  padding: "10px 18px",
-  border: "1px solid #e5e7eb",
-  borderRadius: "14px",
-  background: "#ffffff",
-  cursor: "pointer",
-  color: "#111827",
-  fontWeight: "600",
-  fontSize: "14px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-};
-
-const btnBlue = {
-  ...btnStyle,
-  background: "linear-gradient(135deg,#2563eb,#3b82f6)",
-  color: "white",
-  border: "none",
-};
-
-const profileStyle = {
-  width: "46px",
-  height: "46px",
-  borderRadius: "50%",
-  background: "linear-gradient(135deg,#2563eb,#60a5fa)",
-  color: "white",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: "700",
-  fontSize: "18px",
-  boxShadow: "0 6px 18px rgba(37,99,235,0.3)",
-};
 
 export default Editor;
