@@ -9,3 +9,6 @@ websocket_urlpatterns = [
         DocumentConsumer.as_asgi(),
     ),
 ]
+
+
+
