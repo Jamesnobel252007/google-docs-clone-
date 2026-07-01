@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import * as XLSX from "xlsx";
+
 import TiptapEditor from "../components/TiptapEditor";
 import api from "../api/api";
 function Editor() {
