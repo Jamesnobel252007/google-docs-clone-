@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import TiptapEditor from "../components/TiptapEditor";
-
+import api from "../api/api";
 function Editor() {
   const { id } = useParams();
 
@@ -9,48 +9,39 @@ function Editor() {
   const [status, setStatus] = useState("Saved");
   const [content, setContent] = useState("<p></p>");
 
-  useEffect(() => {
-    const savedDoc = JSON.parse(localStorage.getItem(`doc-${id}`));
 
-    if (savedDoc) {
-      setTitle(savedDoc.title);
-      setContent(savedDoc.content);
-    }
+  useEffect(() => {
+    fetchDocument();
   }, [id]);
 
-  const saveDocument = () => {
-    const docData = {
-      id,
-      title,
-      content,
-      updatedAt: new Date().toLocaleString(),
-    };
+  const fetchDocument = async () => {
+    try {
+      const { data } = await api.get(`documents/${id}/`);
 
-    localStorage.setItem(`doc-${id}`, JSON.stringify(docData));
+      setTitle(data.title);
+      setContent(data.content);
 
-    let docs = JSON.parse(localStorage.getItem("documents-list")) || [];
-
-    const existingIndex = docs.findIndex(
-      (doc) => String(doc.id) === String(id)
-    );
-
-    if (existingIndex !== -1) {
-      docs[existingIndex].title = title;
-      docs[existingIndex].date = "Today";
-    } else {
-      docs.unshift({
-        id: Number(id),
-        title,
-        date: "Today",
-      });
+    } catch (err) {
+      console.error(err);
     }
-
-    localStorage.setItem("documents-list", JSON.stringify(docs));
-
-    setStatus("Saved");
-    alert("Document saved successfully!");
   };
 
+  const saveDocument = async () => {
+
+    try{
+
+        await api.patch(`documents/${id}/`,{
+            title,
+            content,
+        });
+
+        setStatus("Saved");
+
+    }catch(err){
+        console.error(err);
+    }
+
+}
   return (
     <div style={{ minHeight: "100vh", background: "#eef1f5" }}>
       <div
