@@ -4,8 +4,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
-import Register from "./pages/register";
 import Documents from "./pages/Documents";
+import Shared from "./pages/Shared";
 
 
 function App() {
@@ -18,10 +18,11 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/editor/:id" element={<Editor />} />
+        <Route path="/shared" element={<Shared />} />
       </Routes>
     </BrowserRouter>
   );
 }
-import Header from "./components/Header";
+
 
 export default App;
