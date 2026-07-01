@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import Register from "./pages/register";
 import Documents from "./pages/Documents";
+import Shared from "./pages/Shared";
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/documents" element={<Documents />} />
         <Route path="/editor/:id" element={<Editor />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/shared" element={<Shared />} />
       </Routes>
     </BrowserRouter>
   );
