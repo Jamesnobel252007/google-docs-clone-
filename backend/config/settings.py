@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'documents',
-   
+    'channels',
     'collaboration',
 ]
 
@@ -129,6 +129,15 @@ CORS_ALLOW_ALL_ORIGINS = True
 STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = "users.User"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
