@@ -122,7 +122,20 @@ class SharedDocumentsView(APIView):
 
         return Response(serializer.data)
     
+class SharedByMeView(APIView):
 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        documents = document.objects.filter(
+            collaborators__isnull=False,
+            owner=request.user
+        ).distinct()
+
+        serializer = DocumentSerializer(documents, many=True)
+
+        return Response(serializer.data)
 
 class UpdateCollaboratorRoleView(APIView):
 

@@ -1,112 +1,92 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import api from '../api/api';
 
 function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleLogin = () => {
-        if (!username || !password) {
-            alert("Fill all fields");
-            return;
-        }
+    const handleLogin = async (e) => {
+        e.preventDefault();
 
-        const defaultUsers = [
-            { username: "admin", password: "admin123", role: "admin" },
-            { username: "user", password: "user123", role: "user" },
-        ];
+        try {
+            const response = await api.post("token/", {
+                username,
+                password,
+            });
+            localStorage.setItem("access", response.data.access);
+            localStorage.setItem("refresh", response.data.refresh);
 
-        const storedUsers = JSON.parse(localStorage.getItem("users")) || [];
-        const allUsers = [...defaultUsers, ...storedUsers];
-
-        const foundUser = allUsers.find(
-            (u) => u.username === username && u.password === password
-        );
-
-        if (foundUser) {
-            localStorage.setItem("loggedInUser", JSON.stringify(foundUser));
             navigate("/dashboard");
-        } else {
+        } catch (error) {
             alert("Invalid username or password");
         }
     };
 
     return (
-        <div style={styles.page}>
-            <div style={styles.sidebar}>
-                <div style={styles.brandBox}>
-                    <div style={styles.docLogo}>
-                        <span style={styles.docV}>V</span>
-                    </div>
-
-                    <div>
-                        <h1 style={styles.logoText}>VDocs</h1>
-                        <p style={styles.logoSub}>Collaborative Workspace</p>
-                    </div>
+        <div className="min-h-screen bg-[#F9FBFD] flex flex-col items-center justify-center p-4 font-sans antialiased selection:bg-blue-100">
+            {/* Top Minimal Branding Header */}
+            <div className="mb-8 flex items-center space-x-2.5">
+                <div className="h-9 w-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-lg flex items-center justify-center text-white font-black shadow-md shadow-blue-200/50 tracking-wider text-sm">
+                    VD
                 </div>
-
-                <h2 style={styles.heroTitle}>Your workspace for smarter documents.</h2>
-
-                <p style={styles.heroText}>
-                    Create, edit, organize, and collaborate on documents from a clean
-                    productivity dashboard.
-                </p>
-
-                <div style={styles.previewCard}>
-                    <div style={styles.previewTop}>
-                        <span style={styles.dot}></span>
-                        <span style={styles.dot}></span>
-                        <span style={styles.dot}></span>
-                    </div>
-                    <div style={styles.previewLineBig}></div>
-                    <div style={styles.previewLine}></div>
-                    <div style={styles.previewLineSmall}></div>
-                </div>
+                <span className="text-2xl font-semibold tracking-tight text-slate-800">VDocs</span>
             </div>
 
-            <div style={styles.main}>
-                <div style={styles.topRight}>
-                    <span style={styles.muted}>New here?</span>
-                    <button
-                        style={styles.secondaryBtn}
-                        onClick={() => navigate("/register")}
-                    >
-                        Create account
-                    </button>
-                </div>
+            {/* Main Form Box Container */}
+            <form
+                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col"
+                onSubmit={handleLogin}
+            >
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Sign in</h1>
+                <p className="text-sm text-slate-500 mb-6">to continue to your real-time collaborative workspace</p>
 
-                <div style={styles.card}>
-                    <p style={styles.kicker}>Welcome back</p>
-                    <h2 style={styles.title}>Sign in to continue</h2>
-                    <p style={styles.desc}>Access your VDocs workspace securely.</p>
-
-                    <label style={styles.label}>Username</label>
+                {/* Username Field */}
+                <div className="mb-4">
                     <input
-                        style={styles.input}
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
                         type="text"
-                        placeholder="admin / user"
+                        placeholder="Username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                     />
+                </div>
 
-                    <label style={styles.label}>Password</label>
+                {/* Password Field */}
+                <div className="mb-6">
                     <input
-                        style={styles.input}
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
                         type="password"
-                        placeholder="Enter password"
+                        placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
-
-                    <button style={styles.primaryBtn} onClick={handleLogin}>
-                        Sign in
-                    </button>
-
-                    <div style={styles.testBox}>
-                        Demo: <b>admin</b> / <b>admin123</b> or <b>user</b> / <b>user123</b>
-                    </div>
                 </div>
+
+                {/* Submit Action Button */}
+                <button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm shadow-blue-200 transition-all active:scale-[0.99] mb-6"
+                    type="submit"
+                >
+                    Login
+                </button>
+
+                {/* Redirection Link Area */}
+                <p className="text-center text-xs md:text-sm text-slate-500 font-medium">
+                    Don’t have an account?{" "}
+                    <Link
+                        to="/register"
+                        className="text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-4 transition"
+                    >
+                        Create a new account
+                    </Link>
+                </p>
+            </form>
+
+            {/* Soft Footer Detail */}
+            <div className="mt-8 text-xs text-slate-400 font-medium tracking-wide">
+                &copy; 2026 VDocs Suite
             </div>
         </div>
     );

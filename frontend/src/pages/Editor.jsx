@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import TiptapEditor from "../components/TiptapEditor";
-
+import api from "../api/api";
 function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -11,128 +11,39 @@ function Editor() {
   const [status, setStatus] = useState("Saved");
   const [content, setContent] = useState("<p></p>");
 
-  useEffect(() => {
-    const savedDoc = JSON.parse(localStorage.getItem(`doc-${id}`));
 
-    if (savedDoc) {
-      setTitle(savedDoc.title);
-      setContent(savedDoc.content);
-    }
+  useEffect(() => {
+    fetchDocument();
   }, [id]);
 
-  const saveToLocalStorage = () => {
-    const now = new Date().toLocaleString();
+  const fetchDocument = async () => {
+    try {
+      const { data } = await api.get(`documents/${id}/`);
 
-    const docData = {
-      id,
-      title,
-      content,
-      updatedAt: now,
-    };
+      setTitle(data.title);
+      setContent(data.content);
 
-    localStorage.setItem(`doc-${id}`, JSON.stringify(docData));
-
-    let docs = JSON.parse(localStorage.getItem("documents-list")) || [];
-    const existingIndex = docs.findIndex((doc) => String(doc.id) === String(id));
-
-    if (existingIndex !== -1) {
-      docs[existingIndex].title = title;
-      docs[existingIndex].date = "Today";
-      docs[existingIndex].lastEdited = now;
-    } else {
-      docs.unshift({
-        id: Number(id),
-        title,
-        date: "Today",
-        lastEdited: now,
-      });
-    }
-
-    localStorage.setItem("documents-list", JSON.stringify(docs));
-  };
-
-  const saveDocument = () => {
-    saveToLocalStorage();
-    setStatus("Saved");
-    alert("Document saved successfully!");
-  };
-
-  const shareDocument = () => {
-    saveToLocalStorage();
-
-    const shareLink = `${window.location.origin}/share/${id}`;
-    navigator.clipboard.writeText(shareLink);
-
-    alert("Share link copied to clipboard!");
-  };
-
-  const getPlainText = () => {
-    return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  };
-
-  const exportDocument = (type) => {
-    if (!type) return;
-
-    const fileName = title.trim() || "document";
-
-    if (type === "html") {
-      const htmlContent = `
-        <html>
-          <head><title>${fileName}</title></head>
-          <body>
-            <h1>${fileName}</h1>
-            ${content}
-          </body>
-        </html>
-      `;
-
-      const blob = new Blob([htmlContent], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${fileName}.html`;
-      link.click();
-
-      URL.revokeObjectURL(url);
-    }
-
-    if (type === "csv") {
-      const csvContent = `Title,Content\n"${fileName}","${getPlainText()}"`;
-
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${fileName}.csv`;
-      link.click();
-
-      URL.revokeObjectURL(url);
-    }
-
-    if (type === "excel") {
-      const worksheet = XLSX.utils.json_to_sheet([
-        { Title: fileName, Content: getPlainText() },
-      ]);
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Document");
-      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  useEffect(() => {
-    if (status !== "Unsaved changes") return;
+  const saveDocument = async () => {
 
-    const timer = setTimeout(() => {
-      saveToLocalStorage();
-      setStatus("Saved");
-    }, 2000);
+    try{
 
-    return () => clearTimeout(timer);
-  }, [content, title]);
+        await api.patch(`documents/${id}/`,{
+            title,
+            content,
+        });
 
+        setStatus("Saved");
+
+    }catch(err){
+        console.error(err);
+    }
+
+}
   return (
     <div style={{ minHeight: "100vh", background: "#eef4fb" }}>
       <div style={headerStyle}>
