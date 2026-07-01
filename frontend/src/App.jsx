@@ -18,7 +18,9 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/editor/:id" element={<Editor />} />
+
         <Route path="/shared" element={<Shared />} />
+
       </Routes>
     </BrowserRouter>
   );
