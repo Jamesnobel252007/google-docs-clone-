@@ -8,6 +8,8 @@ import Documents from "./pages/Documents";
 import Shared from "./pages/Shared";
 import Favorites from "./pages/Favorites";
 import Trash from "./pages/Trash";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/trash" element={<Trash />} />
         <Route path="/shared" element={<Shared />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </BrowserRouter>
   );

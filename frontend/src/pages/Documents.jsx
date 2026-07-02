@@ -35,26 +35,38 @@ function Documents() {
     location.pathname === "/favorites"
       ? "favorites"
       : location.pathname === "/trash"
-      ? "trash"
-      : "documents";
+        ? "trash"
+        : "documents";
 
   const pageTitle =
     pageType === "favorites"
       ? "Favorite Documents"
       : pageType === "trash"
-      ? "Trash"
-      : "All Documents";
+        ? "Trash"
+        : "All Documents";
+
+  const getDocumentsState = () => {
+    return JSON.parse(localStorage.getItem("documentsState")) || {};
+  };
+
+  const saveDocumentsState = (state) => {
+    localStorage.setItem("documentsState", JSON.stringify(state));
+  };
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("documents/");
+      const savedState = getDocumentsState();
 
-      const preparedDocs = data.map((doc) => ({
-        ...doc,
-        is_favorite: doc.is_favorite || false,
-        is_trashed: doc.is_trashed || false,
-      }));
+      const preparedDocs = data
+        .map((doc) => ({
+          ...doc,
+          is_favorite: savedState[doc.id]?.is_favorite || false,
+          is_trashed: savedState[doc.id]?.is_trashed || false,
+          is_deleted: savedState[doc.id]?.is_deleted || false,
+        }))
+        .filter((doc) => !doc.is_deleted);
 
       setDocuments(preparedDocs);
     } finally {
@@ -84,11 +96,24 @@ function Documents() {
     e.stopPropagation();
     setOpenMenuId(null);
 
-    setDocuments((prevDocs) =>
-      prevDocs.map((doc) =>
+    setDocuments((prevDocs) => {
+      const updated = prevDocs.map((doc) =>
         doc.id === id ? { ...doc, is_favorite: !doc.is_favorite } : doc
-      )
-    );
+      );
+
+      const state = getDocumentsState();
+      const selectedDoc = updated.find((doc) => doc.id === id);
+
+      state[id] = {
+        ...state[id],
+        is_favorite: selectedDoc.is_favorite,
+        is_trashed: selectedDoc.is_trashed || false,
+        is_deleted: false,
+      };
+
+      saveDocumentsState(state);
+      return updated;
+    });
   };
 
   const moveToTrash = (e, id) => {
@@ -97,22 +122,46 @@ function Documents() {
 
     if (!window.confirm("Move this document to trash?")) return;
 
-    setDocuments((prevDocs) =>
-      prevDocs.map((doc) =>
+    setDocuments((prevDocs) => {
+      const updated = prevDocs.map((doc) =>
         doc.id === id ? { ...doc, is_trashed: true } : doc
-      )
-    );
+      );
+
+      const state = getDocumentsState();
+      const selectedDoc = updated.find((doc) => doc.id === id);
+
+      state[id] = {
+        ...state[id],
+        is_favorite: selectedDoc.is_favorite || false,
+        is_trashed: true,
+        is_deleted: false,
+      };
+
+      saveDocumentsState(state);
+      return updated;
+    });
   };
 
   const restoreDocument = (e, id) => {
     e.stopPropagation();
     setOpenMenuId(null);
 
-    setDocuments((prevDocs) =>
-      prevDocs.map((doc) =>
+    setDocuments((prevDocs) => {
+      const updated = prevDocs.map((doc) =>
         doc.id === id ? { ...doc, is_trashed: false } : doc
-      )
-    );
+      );
+
+      const state = getDocumentsState();
+
+      state[id] = {
+        ...state[id],
+        is_trashed: false,
+        is_deleted: false,
+      };
+
+      saveDocumentsState(state);
+      return updated;
+    });
   };
 
   const deleteForever = (e, id) => {
@@ -121,7 +170,21 @@ function Documents() {
 
     if (!window.confirm("Delete forever? This cannot be undone.")) return;
 
-    setDocuments((prevDocs) => prevDocs.filter((doc) => doc.id !== id));
+    setDocuments((prevDocs) => {
+      const updated = prevDocs.filter((doc) => doc.id !== id);
+
+      const state = getDocumentsState();
+
+      state[id] = {
+        ...state[id],
+        is_deleted: true,
+        is_trashed: false,
+        is_favorite: false,
+      };
+
+      saveDocumentsState(state);
+      return updated;
+    });
   };
 
   const renameDocument = async (id, title) => {
@@ -220,11 +283,10 @@ function Documents() {
                           setSortOrder("newest");
                           setSortMenuOpen(false);
                         }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${
-                          sortOrder === "newest"
+                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "newest"
                             ? "text-blue-600 bg-blue-50"
                             : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         Newest first
                       </button>
@@ -234,11 +296,10 @@ function Documents() {
                           setSortOrder("oldest");
                           setSortMenuOpen(false);
                         }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${
-                          sortOrder === "oldest"
+                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "oldest"
                             ? "text-blue-600 bg-blue-50"
                             : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         Oldest first
                       </button>
@@ -249,22 +310,20 @@ function Documents() {
                 <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      viewMode === "grid"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "grid"
                         ? "bg-white text-slate-700 shadow-sm"
                         : "text-slate-400 hover:text-slate-600"
-                    }`}
+                      }`}
                   >
                     <Grid3x3 size={14} /> Grid
                   </button>
 
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      viewMode === "list"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "list"
                         ? "bg-white text-slate-700 shadow-sm"
                         : "text-slate-400 hover:text-slate-600"
-                    }`}
+                      }`}
                   >
                     <List size={14} /> List
                   </button>
@@ -292,13 +351,11 @@ function Documents() {
                   onClick={() => {
                     if (!doc.is_trashed) navigate(`/editor/${doc.id}`);
                   }}
-                  className={`bg-white border border-slate-200/80 rounded-[20px] p-6 flex ${
-                    viewMode === "grid"
+                  className={`bg-white border border-slate-200/80 rounded-[20px] p-6 flex ${viewMode === "grid"
                       ? "flex-col justify-between min-h-[190px]"
                       : "flex-row items-center justify-between"
-                  } shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-200 relative group ${
-                    doc.is_trashed ? "cursor-default opacity-80" : "cursor-pointer"
-                  }`}
+                    } shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-200 relative group ${doc.is_trashed ? "cursor-default opacity-80" : "cursor-pointer"
+                    }`}
                 >
                   <div className="flex items-start justify-between w-full">
                     <div className="flex items-center gap-4">
