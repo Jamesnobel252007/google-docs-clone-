@@ -16,12 +16,30 @@ function Editor() {
   const socketRef = useRef(null);
   const isRemote = useRef(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
-
-
+  const [currentUser, setCurrentUser] = useState(null);
+  const [collaborators, setCollaborators] = useState([]);
 
   useEffect(() => {
     fetchDocument();
   }, [id]);
+
+const isOwner = collaborators?.some(
+  (c) => c.id === currentUser?.id && c.role === "owner"
+);
+
+  const loadCollaborators = async () => {
+    const res = await api.get(`documents/${id}/collaborators/`);
+    setCollaborators(res.data);
+  };
+
+  useEffect(() => {
+    loadCollaborators();
+  }, [id]);
+
+  useEffect(() => {
+    api.get("user/")
+      .then(res => setCurrentUser(res.data));
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -104,7 +122,7 @@ function Editor() {
         email: shareEmail,
         role: shareRole,
       });
-
+      await loadCollaborators();
       alert("Document shared successfully!");
 
       setShowShareModal(false);
@@ -153,9 +171,57 @@ function Editor() {
     }
   };
 
+  const removeCollaborator = async (userId) => {
+
+    if (!window.confirm("Remove this collaborator?"))
+      return;
+
+    try {
+
+      await api.delete(
+        `documents/${id}/remove-collaborator/${userId}/`
+      );
+
+      setCollaborators(prev =>
+        prev.filter(user => user.id !== userId)
+      );
+
+    } catch (err) {
+
+      alert(
+        err.response?.data?.error ||
+        "Unable to remove collaborator"
+      );
+
+    }
+
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F7FB]">
+      <div className="collaborators-panel">
+        <h4>Collaborators</h4>
+
+        {collaborators.map(user => (
+          <div
+            key={user.id}
+            className="flex items-center justify-between py-2 border-b"
+          >
+            <div className="font-medium">
+              {user.username} ({user.role})
+            </div>
+
+            {isOwner && user.role !== "owner" && (
+              <button
+                onClick={() => removeCollaborator(user.id)}
+                className="text-red-600 text-sm hover:underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
 

@@ -1,34 +1,34 @@
 import json
+from pydoc import doc
 from channels.generic.websocket import AsyncWebsocketConsumer
-
+from asgiref.sync import sync_to_async
+from backend.collaboration.models import Collaborator
+from documents.models import document
 
 class DocumentConsumer(AsyncWebsocketConsumer):
 
     active_users = {}
 
     async def connect(self):
+
         self.document_id = self.scope["url_route"]["kwargs"]["id"]
         self.room_group_name = f"document_{self.document_id}"
 
-        # ✅ FIX: use scope directly (clean + reliable)
-        self.user = self.scope.get("user")
+        self.user = self.scope["user"]
 
-        print("USER:", self.user)
-        print("AUTH:", self.user.is_authenticated if self.user else None)
+        has_access = await self.check_access()
 
-        self.username = (
-            getattr(self.user, "username", None)
-            if self.user and self.user.is_authenticated
-            else "Anonymous"
-        )
+        if not has_access:
+            await self.close()
+            return
 
-        # Join room
+        self.username = self.user.username
+
         await self.channel_layer.group_add(
             self.room_group_name,
-            self.channel_name,
-        )
+            self.channel_name
+    )
 
-        # Track user
         if self.room_group_name not in self.active_users:
             self.active_users[self.room_group_name] = set()
 
@@ -41,15 +41,18 @@ class DocumentConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
 
         if self.room_group_name in self.active_users:
-            self.active_users[self.room_group_name].discard(self.username)
 
-            if not self.active_users[self.room_group_name]:
+            self.active_users[self.room_group_name].discard(
+                self.username
+        )
+
+            if len(self.active_users[self.room_group_name]) == 0:
                 del self.active_users[self.room_group_name]
 
         await self.channel_layer.group_discard(
             self.room_group_name,
-            self.channel_name,
-        )
+            self.channel_name
+    )
 
         await self.broadcast_online_users()
 
@@ -91,3 +94,17 @@ class DocumentConsumer(AsyncWebsocketConsumer):
                 "users": event["users"],
             })
         )
+    
+
+
+    @sync_to_async
+    async def check_access(self):
+        if not self.user or self.user.is_anonymous:
+            return False
+
+        return await database_sync_to_async(
+            Collaborator.objects.filter(
+            document=doc,
+            user=self.user
+        ).exists
+    )()
