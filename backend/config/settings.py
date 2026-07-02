@@ -160,3 +160,8 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",
     "content-type",
 ]
+
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+SESSION_COOKIE_SECURE = False  # dev onlyx

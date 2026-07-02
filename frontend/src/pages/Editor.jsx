@@ -1,4 +1,4 @@
-import { useEffect, useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import TiptapEditor from "../components/TiptapEditor";
@@ -13,8 +13,9 @@ function Editor() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareEmail, setShareEmail] = useState("");
   const [shareRole, setShareRole] = useState("viewer");
-const socketRef = useRef(null);
-const isRemote = useRef(false);
+  const socketRef = useRef(null);
+  const isRemote = useRef(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
 
 
@@ -22,19 +23,19 @@ const isRemote = useRef(false);
     fetchDocument();
   }, [id]);
 
-useEffect(() => {
-  const handleKeyDown = (e) => {
-    if (e.key === "Escape") {
-      setShowShareModal(false);
-    }
-  };
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setShowShareModal(false);
+      }
+    };
 
-  window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "Unsaved changes") return;
@@ -46,30 +47,39 @@ useEffect(() => {
     return () => clearTimeout(timer);
   }, [content, title]);
 
-useEffect(() => {
-  socketRef.current = new WebSocket(
-    `ws://127.0.0.1:8000/ws/documents/${id}/`
-  );
+  useEffect(() => {
+    const token = localStorage.getItem("access");
 
-  socketRef.current.onopen = () => {
-    console.log("WS connected");
-  };
+    socketRef.current = new WebSocket(
+      `ws://127.0.0.1:8000/ws/documents/${id}/?token=${token}`
+    );
 
-  socketRef.current.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    socketRef.current.onopen = () => {
+      console.log("WS connected");
+    };
 
-    console.log("Received:", data);
+    socketRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-    isRemote.current = true;
-    setContent(data.message);
-  };
+      console.log("Received:", data);
 
-  return () => {
-    socketRef.current.close();
-  };
-}, [id]);
+      if (data.type === "online_users") {
+        setOnlineUsers(data.users);
+        return;
+      }
 
-window.socketRef = socketRef;
+      if (data.message) {
+        isRemote.current = true;
+        setContent(data.message);
+      }
+    };
+
+    return () => {
+      socketRef.current.close();
+    };
+  }, [id]);
+
+  window.socketRef = socketRef;
 
   const fetchDocument = async () => {
     try {
@@ -247,12 +257,12 @@ window.socketRef = socketRef;
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 min-h-[85vh] p-10">
 
             <TiptapEditor
-  content={content}
-  setContent={setContent}
-  setStatus={setStatus}
-  socketRef={socketRef}
-  isRemote={isRemote}
-/>
+              content={content}
+              setContent={setContent}
+              setStatus={setStatus}
+              socketRef={socketRef}
+              isRemote={isRemote}
+            />
 
           </div>
 
@@ -260,15 +270,26 @@ window.socketRef = socketRef;
 
       </main>
 
+      <div className="users-panel">
+        <h4>Online Users</h4>
+        {onlineUsers.map((user, idx) => (
+
+          <div key={idx} className="user-badge">
+
+            {user}
+          </div>
+        ))}
+      </div>
+
       {showShareModal && (
         <div
-  className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-  onClick={() => setShowShareModal(false)}
->
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setShowShareModal(false)}
+        >
           <div
-  className="bg-white rounded-xl w-[420px] p-6 shadow-xl"
-  onClick={(e) => e.stopPropagation()}
->
+            className="bg-white rounded-xl w-[420px] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
 
             <h2 className="text-2xl font-bold text-slate-800">
               Share Document
@@ -318,6 +339,8 @@ window.socketRef = socketRef;
           </div>
         </div>
       )}
+
+
     </div>
   );
 }
