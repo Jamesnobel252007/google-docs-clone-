@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import TiptapEditor from "../components/TiptapEditor";
@@ -13,6 +13,10 @@ function Editor() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareEmail, setShareEmail] = useState("");
   const [shareRole, setShareRole] = useState("viewer");
+const socketRef = useRef(null);
+const isRemote = useRef(false);
+
+
 
   useEffect(() => {
     fetchDocument();
@@ -42,6 +46,30 @@ useEffect(() => {
     return () => clearTimeout(timer);
   }, [content, title]);
 
+useEffect(() => {
+  socketRef.current = new WebSocket(
+    `ws://127.0.0.1:8000/ws/documents/${id}/`
+  );
+
+  socketRef.current.onopen = () => {
+    console.log("WS connected");
+  };
+
+  socketRef.current.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    console.log("Received:", data);
+
+    isRemote.current = true;
+    setContent(data.message);
+  };
+
+  return () => {
+    socketRef.current.close();
+  };
+}, [id]);
+
+window.socketRef = socketRef;
 
   const fetchDocument = async () => {
     try {
@@ -219,10 +247,12 @@ useEffect(() => {
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 min-h-[85vh] p-10">
 
             <TiptapEditor
-              content={content}
-              setContent={setContent}
-              setStatus={setStatus}
-            />
+  content={content}
+  setContent={setContent}
+  setStatus={setStatus}
+  socketRef={socketRef}
+  isRemote={isRemote}
+/>
 
           </div>
 

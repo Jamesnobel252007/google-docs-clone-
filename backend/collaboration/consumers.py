@@ -1,12 +1,11 @@
 import json
-
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
 class DocumentConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
         self.document_id = self.scope["url_route"]["kwargs"]["document_id"]
-
         self.room_group_name = f"document_{self.document_id}"
 
         await self.channel_layer.group_add(
@@ -15,8 +14,8 @@ class DocumentConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
-
         print(f"Connected to {self.room_group_name}")
+
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -24,4 +23,22 @@ class DocumentConsumer(AsyncWebsocketConsumer):
             self.channel_name,
         )
 
-        print(f"Disconnected from {self.room_group_name}")
+
+    async def receive(self, text_data):
+        print("🔥 RECEIVE HIT:", text_data)
+
+        data = json.loads(text_data)
+
+        await self.send(text_data=json.dumps({
+        "message": data["message"]
+    }))
+
+
+    async def document_message(self, event):
+        message = event["message"]
+
+        await self.send(text_data=json.dumps({
+            "message": message,
+        }))
+
+        print("Sent:", message)

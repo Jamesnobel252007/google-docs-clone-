@@ -8,7 +8,7 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import FontFamily from "@tiptap/extension-font-family";
 
-function TiptapEditor({ content, setContent, setStatus }) {
+function TiptapEditor({ content, setContent, setStatus, socketRef, isRemote }) {
   const [align, setAlign] = useState("");
 
   const editor = useEditor({
@@ -22,10 +22,23 @@ function TiptapEditor({ content, setContent, setStatus }) {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: content || "<p></p>",
-    onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
-      setStatus("Unsaved changes");
-    },
+   onUpdate: ({ editor }) => {
+  if (isRemote.current) {
+    isRemote.current = false;
+    return;
+  }
+
+  const html = editor.getHTML();
+
+  setContent(html);
+  setStatus("Unsaved changes");
+
+  socketRef.current?.send(
+    JSON.stringify({
+      message: html,
+    })
+  );
+},
   });
 
   useEffect(() => {
