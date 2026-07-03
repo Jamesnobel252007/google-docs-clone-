@@ -1,8 +1,9 @@
 import json
 from pydoc import doc
+from xml.dom.minidom import Document
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from backend.collaboration.models import Collaborator
+from collaboration.models import Collaborator
 from documents.models import document
 
 class DocumentConsumer(AsyncWebsocketConsumer):
@@ -97,14 +98,19 @@ class DocumentConsumer(AsyncWebsocketConsumer):
     
 
 
-    @sync_to_async
-    async def check_access(self):
-        if not self.user or self.user.is_anonymous:
+    from channels.db import database_sync_to_async
+
+    @database_sync_to_async
+    def check_access(self):
+        if self.user.is_anonymous:
             return False
 
-        return await database_sync_to_async(
-            Collaborator.objects.filter(
+        doc = document.objects.get(id=self.document_id)
+
+        return (
+        doc.owner == self.user or
+        Collaborator.objects.filter(
             document=doc,
             user=self.user
-        ).exists
-    )()
+        ).exists()
+    )
