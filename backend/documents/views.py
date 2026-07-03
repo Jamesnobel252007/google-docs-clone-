@@ -17,15 +17,9 @@ class DocumentViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrCollaborator]
 
     def get_queryset(self):
-
         return document.objects.filter(
-
-        Q(owner=self.request.user)
-
-        |
-
+        Q(owner=self.request.user) |
         Q(collaborators__user=self.request.user)
-
     ).distinct()
 
     def perform_create(self, serializer):
@@ -95,3 +89,25 @@ class DocumentViewSet(ModelViewSet):
 
 # users/views.py
 
+    @action(detail=True, methods=["patch"])
+    def toggle_favorite(self, request, pk=None):
+        doc = self.get_object()
+        doc.is_favorite = not doc.is_favorite
+        doc.save()
+        return Response({"is_favorite": doc.is_favorite})
+
+
+    @action(detail=True, methods=["patch"])
+    def move_to_trash(self, request, pk=None):
+        doc = self.get_object()
+        doc.is_trashed = True
+        doc.save()
+        return Response({"is_trashed": True})
+
+
+    @action(detail=True, methods=["patch"])
+    def restore(self, request, pk=None):
+        doc = self.get_object()
+        doc.is_trashed = False
+        doc.save()
+        return Response({"message": "Restored"})
