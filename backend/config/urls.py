@@ -11,7 +11,7 @@ router.register(r"documents", DocumentViewSet, basename="documents")
 urlpatterns = [
     path("admin/", admin.site.urls),
     
-    path("users/", include("users.urls")),
+    path("api/", include("users.urls")),
 
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),

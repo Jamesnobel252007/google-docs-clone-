@@ -1,6 +1,6 @@
 from pydoc import doc
 
-from httpcore import request
+
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from collaboration.models import Collaborator
@@ -51,10 +51,11 @@ class DocumentViewSet(ModelViewSet):
 
         for c in collaborators:
             collaborator_list.append({
-            "id": c.user.id,
-            "username": c.user.username,
-            "role": c.role,
-        })
+    "id": c.user.id,
+    "username": c.user.username,
+    "role": c.role,
+    "collaborator_id": c.id,
+})
 
         return Response(collaborator_list)
     
@@ -91,3 +92,6 @@ class DocumentViewSet(ModelViewSet):
         collaborator.delete()
 
         return Response({"message": "Collaborator removed"})
+
+# users/views.py
+

@@ -1,90 +1,89 @@
 import json
-from pydoc import doc
-from xml.dom.minidom import Document
+
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
-from collaboration.models import Collaborator
+from channels.db import database_sync_to_async
+
 from documents.models import document
+from collaboration.models import Collaborator
+
 
 class DocumentConsumer(AsyncWebsocketConsumer):
 
+    # document_id -> {username1, username2}
     active_users = {}
 
     async def connect(self):
-
         self.document_id = self.scope["url_route"]["kwargs"]["id"]
-        self.room_group_name = f"document_{self.document_id}"
+        self.group_name = f"document_{self.document_id}"
 
         self.user = self.scope["user"]
 
-        has_access = await self.check_access()
+        allowed = await self.has_access()
 
-        if not has_access:
+        if not allowed:
             await self.close()
             return
 
-        self.username = self.user.username
-
         await self.channel_layer.group_add(
-            self.room_group_name,
+            self.group_name,
             self.channel_name
-    )
-
-        if self.room_group_name not in self.active_users:
-            self.active_users[self.room_group_name] = set()
-
-        self.active_users[self.room_group_name].add(self.username)
+        )
 
         await self.accept()
 
-        await self.broadcast_online_users()
+        users = self.active_users.setdefault(
+            self.group_name,
+            set()
+        )
+
+        users.add(self.user.username)
+
+        await self.send_online_users()
 
     async def disconnect(self, close_code):
 
-        if self.room_group_name in self.active_users:
+        if self.group_name in self.active_users:
 
-            self.active_users[self.room_group_name].discard(
-                self.username
-        )
+            self.active_users[self.group_name].discard(
+                self.user.username
+            )
 
-            if len(self.active_users[self.room_group_name]) == 0:
-                del self.active_users[self.room_group_name]
+            if len(self.active_users[self.group_name]) == 0:
+                del self.active_users[self.group_name]
 
         await self.channel_layer.group_discard(
-            self.room_group_name,
+            self.group_name,
             self.channel_name
-    )
+        )
 
-        await self.broadcast_online_users()
+        await self.send_online_users()
 
     async def receive(self, text_data):
+
         data = json.loads(text_data)
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "document_message",
-                "message": data["message"],
-            },
-        )
+        if data.get("type") == "content":
 
-    async def document_message(self, event):
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "document_update",
+                    "message": data["message"],
+                    "sender": self.user.username,
+                },
+            )
+
+    async def document_update(self, event):
+
+        # Don't echo back to sender
+        if event["sender"] == self.user.username:
+            return
+
         await self.send(
             text_data=json.dumps({
+                "type": "content",
                 "message": event["message"],
             })
-        )
-
-    async def broadcast_online_users(self):
-
-        users = list(self.active_users.get(self.room_group_name, set()))
-
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "online_users",
-                "users": users,
-            },
         )
 
     async def online_users(self, event):
@@ -95,22 +94,39 @@ class DocumentConsumer(AsyncWebsocketConsumer):
                 "users": event["users"],
             })
         )
-    
 
+    async def send_online_users(self):
 
-    from channels.db import database_sync_to_async
+        users = list(
+            self.active_users.get(
+                self.group_name,
+                set()
+            )
+        )
+
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "online_users",
+                "users": users,
+            }
+        )
 
     @database_sync_to_async
-    def check_access(self):
+    def has_access(self):
+
         if self.user.is_anonymous:
             return False
 
-        doc = document.objects.get(id=self.document_id)
+        try:
+            doc = document.objects.get(id=self.document_id)
+        except document.DoesNotExist:
+            return False
 
-        return (
-        doc.owner == self.user or
-        Collaborator.objects.filter(
+        if doc.owner == self.user:
+            return True
+
+        return Collaborator.objects.filter(
             document=doc,
             user=self.user
         ).exists()
-    )
