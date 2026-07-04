@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib import admin
-
+from documents.views import shared_to_me, shared_by_me
 from documents.views import DocumentViewSet
 
 router = DefaultRouter()
@@ -18,4 +18,8 @@ urlpatterns = [
 path("api/", include("collaboration.urls")),
     # IMPORTANT: ONLY ONE API ROUTER ENTRY
     path("api/", include(router.urls)),
+
+
+    path("shared-documents/", shared_to_me),
+    path("shared-by-me/", shared_by_me),
 ]

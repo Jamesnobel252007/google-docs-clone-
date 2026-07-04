@@ -1,113 +1,61 @@
-from pydoc import doc
-
-
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from collaboration.models import Collaborator
-from .models import Document
-from .serializers import DocumentSerializer
-from rest_framework.viewsets import ModelViewSet
-from collaboration.permissions import IsOwnerOrCollaborator
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from .models import Document
+from .serializers import DocumentSerializer
 
-class DocumentViewSet(ModelViewSet):
+
+class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrCollaborator]
 
     def get_queryset(self):
-        return Document.objects.filter(
-            Q(owner=self.request.user) |
-            Q(collaborators__user=self.request.user)
-        ).distinct()
+        user = self.request.user
+        return Document.objects.filter(owner=user)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-
-
-    @action(detail=True, methods=["get"])
-    def collaborators(self, request, pk=None):
-        doc = self.get_object()
-
-        collaborator_list = []
-
-    # Add owner first
-        collaborator_list.append({
-        "id": doc.owner.id,
-        "username": doc.owner.username,
-        "role": "owner",
-    })
-
-    # Add collaborators
-        collaborators = Collaborator.objects.filter(document=doc)
-
-        for c in collaborators:
-            collaborator_list.append({
-    "id": c.user.id,
-    "username": c.user.username,
-    "role": c.role,
-    "collaborator_id": c.id,
-})
-
-        return Response(collaborator_list)
-    
-    
-    @action(detail=True, methods=["delete"], url_path="remove-collaborator/(?P<user_id>[^/.]+)")
-    def remove_collaborator(self, request, pk=None, user_id=None):
-
-        doc = self.get_object()
-
-    # Only owner can remove collaborators
-        if doc.owner != request.user:
-            return Response(
-            {"error": "Only owner can remove collaborators"},
-            status=403
-        )
-
-        if int(user_id) == doc.owner.id:
-            return Response(
-        {"error": "Owner cannot be removed."},
-        status=400
-    )
-    
-        collaborator = Collaborator.objects.filter(
-        document=doc,
-        user_id=user_id
-    ).first()
-
-        if not collaborator:
-            return Response(
-            {"error": "Collaborator not found"},
-            status=404
-        )
-
-        collaborator.delete()
-
-        return Response({"message": "Collaborator removed"})
-
-# users/views.py
-
+    # ⭐ FAVORITE TOGGLE
     @action(detail=True, methods=["patch"])
-    def toggle_favorite(self, request, pk=None):
+    def favorite(self, request, pk=None):
         doc = self.get_object()
         doc.is_favorite = not doc.is_favorite
         doc.save()
-        return Response({"is_favorite": doc.is_favorite})
+        return Response({"status": "ok", "is_favorite": doc.is_favorite})
 
-
+    # 🗑️ MOVE TO TRASH
     @action(detail=True, methods=["patch"])
-    def move_to_trash(self, request, pk=None):
+    def trash(self, request, pk=None):
         doc = self.get_object()
         doc.is_trashed = True
         doc.save()
-        return Response({"is_trashed": True})
+        return Response({"status": "moved to trash"})
 
-
+    # ♻️ RESTORE
     @action(detail=True, methods=["patch"])
     def restore(self, request, pk=None):
         doc = self.get_object()
         doc.is_trashed = False
         doc.save()
-        return Response({"message": "Restored"})
+        return Response({"status": "restored"})
+
+    # ❌ DELETE FOREVER
+    @action(detail=True, methods=["delete"])
+    def delete_forever(self, request, pk=None):
+        doc = self.get_object()
+        doc.delete()
+        return Response({"status": "deleted forever"})
+    
+
+    
+from rest_framework.decorators import api_view
+
+@api_view(["GET"])
+def shared_to_me(request):
+    docs = Document.objects.filter(collaborator__user=request.user)
+    return Response(DocumentSerializer(docs, many=True).data)
+
+@api_view(["GET"])
+def shared_by_me(request):
+    docs = Document.objects.filter(owner=request.user)
+    return Response(DocumentSerializer(docs, many=True).data)

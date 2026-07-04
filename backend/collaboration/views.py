@@ -1,10 +1,11 @@
 from django.shortcuts import render
 
 # Create your views here.
+from httpcore import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from rest_framework import viewsets
 from users.models import User
 from documents.models import Document
 from .models import Collaborator
@@ -128,7 +129,7 @@ class SharedByMeView(APIView):
 
     def get(self, request):
 
-        documents = document.objects.filter(
+        documents = Document.objects.filter(
             collaborators__isnull=False,
             owner=request.user
         ).distinct()
@@ -210,3 +211,18 @@ class RemoveCollaboratorView(APIView):
     "document": document_title,
     "role_removed": role
 })
+       
+from collaboration.models import Collaborator
+
+class SharedViewSet(viewsets.ViewSet):
+
+    def list_shared_to_me(self, request):
+        docs = Document.objects.filter(
+            collaborator__user=request.user
+        )
+        return Response(DocumentSerializer(docs, many=True).data)
+
+    def list_shared_by_me(self, request):
+        docs = Document.objects.filter(owner=request.user)
+        return Response(DocumentSerializer(docs, many=True).data)        
+    

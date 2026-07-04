@@ -8,31 +8,58 @@ import { FileText, Star } from "lucide-react";
 function Favorites() {
     const [docs, setDocs] = useState([]);
     const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const fetchFavorites = async () => {
+        try {
+            setLoading(true);
+
+            const { data } = await api.get("documents/?filter=favorites");
+
+            setDocs(data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        fetchFavorites();
+        const loadFavorites = async () => {
+            try {
+                setLoading(true);
+
+                const { data } = await api.get("documents/?filter=favorites");
+
+                setDocs(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadFavorites();
     }, []);
 
-    const fetchFavorites = async () => {
-        const { data } = await api.get("documents/");
-        setDocs(data);
-    };
-
     const toggleFavorite = async (id, value) => {
-        await api.patch(`documents/${id}/`, {
-            is_favorite: value
-        });
+        try {
+            await api.patch(`documents/${id}/`, {
+                is_favorite: value
+            });
 
-        fetchFavorites();
+            fetchFavorites();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const filtered = docs.filter(
-        d =>
-            d.is_favorite &&
-            !d.is_trashed &&
-            d.title.toLowerCase().includes(search.toLowerCase())
+    const filtered = docs.filter(d =>
+        d.title.toLowerCase().includes(search.toLowerCase())
     );
+
+    if (loading) return <div className="p-10">Loading...</div>;
 
     return (
         <div className="min-h-screen flex bg-[#F9FBFD]">

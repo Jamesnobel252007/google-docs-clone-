@@ -4,18 +4,19 @@ from django.db import models
 from django.db import models
 from django.conf import settings
 
+from users.models import User
+
 class Document(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
 
     is_favorite = models.BooleanField(default=False)
     is_trashed = models.BooleanField(default=False)
-    is_deleted = models.BooleanField(default=False)
 
-    title = models.CharField(max_length=255)
-
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     content = models.TextField(
         blank=True,

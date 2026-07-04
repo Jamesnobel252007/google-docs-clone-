@@ -5,30 +5,64 @@ import api from "../api/api";
 
 function Trash() {
     const [docs, setDocs] = useState([]);
-
-    useEffect(() => {
-        fetchTrash();
-    }, []);
+    const [loading, setLoading] = useState(true);
 
     const fetchTrash = async () => {
-        const { data } = await api.get("documents/");
-        setDocs(data);
+        try {
+            setLoading(true);
+
+            // backend preferred
+            const { data } = await api.get("documents/?filter=trash");
+
+            setDocs(data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const restore = async (id) => {
-        await api.patch(`documents/${id}/`, {
-            is_trashed: false
-        });
+    useEffect(() => {
+        const loadTrash = async () => {
+            try {
+                setLoading(true);
 
-        fetchTrash();
+                const { data } = await api.get("documents/?filter=trash");
+                setDocs(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadTrash();
+    }, []);
+
+    const restore = async (id) => {
+        try {
+            await api.patch(`documents/${id}/`, {
+                is_trashed: false
+            });
+
+            fetchTrash();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const deleteForever = async (id) => {
-        await api.delete(`documents/${id}/`);
-        fetchTrash();
+        try {
+            await api.delete(`documents/${id}/`);
+            fetchTrash();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const trashDocs = docs.filter(d => d.is_trashed);
+    if (loading) {
+        return <div className="p-10">Loading...</div>;
+    }
 
     return (
         <div className="min-h-screen flex bg-[#F9FBFD]">
@@ -38,15 +72,13 @@ function Trash() {
                 <Header />
 
                 <main className="p-8 max-w-7xl mx-auto w-full">
-
                     <h1 className="text-3xl font-bold mb-4">Trash</h1>
 
-                    {trashDocs.length === 0 ? (
+                    {docs.length === 0 ? (
                         <p>No trashed documents</p>
                     ) : (
-                        trashDocs.map(doc => (
+                        docs.map(doc => (
                             <div key={doc.id} className="bg-white p-4 border rounded mb-3">
-
                                 <h3>{doc.title}</h3>
 
                                 <button onClick={() => restore(doc.id)}>
@@ -56,11 +88,9 @@ function Trash() {
                                 <button onClick={() => deleteForever(doc.id)}>
                                     Delete Forever
                                 </button>
-
                             </div>
                         ))
                     )}
-
                 </main>
             </div>
         </div>

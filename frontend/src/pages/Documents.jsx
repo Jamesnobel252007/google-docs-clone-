@@ -45,37 +45,38 @@ function Documents() {
         ? "Trash"
         : "All Documents";
 
-  const getDocumentsState = () => {
-    return JSON.parse(localStorage.getItem("documentsState")) || {};
-  };
 
-  const saveDocumentsState = (state) => {
-    localStorage.setItem("documentsState", JSON.stringify(state));
-  };
+
+
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("documents/");
-      const savedState = getDocumentsState();
 
-      const preparedDocs = data
-        .map((doc) => ({
-          ...doc,
-          is_favorite: savedState[doc.id]?.is_favorite || false,
-          is_trashed: savedState[doc.id]?.is_trashed || false,
-          is_deleted: savedState[doc.id]?.is_deleted || false,
-        }))
-        .filter((doc) => !doc.is_deleted);
-
-      setDocuments(preparedDocs);
+      setDocuments(data); // 🔥 backend is source of truth
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDocuments();
+    const loadDocuments = async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get("documents/");
+
+        setDocuments(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
   }, []);
 
   const createDocument = async () => {
@@ -92,99 +93,56 @@ function Documents() {
     }
   };
 
-  const toggleFavorite = (e, id) => {
+  const toggleFavorite = async (e, id) => {
     e.stopPropagation();
     setOpenMenuId(null);
 
-    setDocuments((prevDocs) => {
-      const updated = prevDocs.map((doc) =>
-        doc.id === id ? { ...doc, is_favorite: !doc.is_favorite } : doc
-      );
-
-      const state = getDocumentsState();
-      const selectedDoc = updated.find((doc) => doc.id === id);
-
-      state[id] = {
-        ...state[id],
-        is_favorite: selectedDoc.is_favorite,
-        is_trashed: selectedDoc.is_trashed || false,
-        is_deleted: false,
-      };
-
-      saveDocumentsState(state);
-      return updated;
-    });
+    try {
+      await api.patch(`documents/${id}/favorite/`);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const moveToTrash = (e, id) => {
+  const moveToTrash = async (e, id) => {
     e.stopPropagation();
     setOpenMenuId(null);
 
     if (!window.confirm("Move this document to trash?")) return;
 
-    setDocuments((prevDocs) => {
-      const updated = prevDocs.map((doc) =>
-        doc.id === id ? { ...doc, is_trashed: true } : doc
-      );
-
-      const state = getDocumentsState();
-      const selectedDoc = updated.find((doc) => doc.id === id);
-
-      state[id] = {
-        ...state[id],
-        is_favorite: selectedDoc.is_favorite || false,
-        is_trashed: true,
-        is_deleted: false,
-      };
-
-      saveDocumentsState(state);
-      return updated;
-    });
+    try {
+      await api.patch(`documents/${id}/trash/`);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const restoreDocument = (e, id) => {
+  const restoreDocument = async (e, id) => {
     e.stopPropagation();
     setOpenMenuId(null);
 
-    setDocuments((prevDocs) => {
-      const updated = prevDocs.map((doc) =>
-        doc.id === id ? { ...doc, is_trashed: false } : doc
-      );
-
-      const state = getDocumentsState();
-
-      state[id] = {
-        ...state[id],
-        is_trashed: false,
-        is_deleted: false,
-      };
-
-      saveDocumentsState(state);
-      return updated;
-    });
+    try {
+      await api.patch(`documents/${id}/restore/`);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const deleteForever = (e, id) => {
+  const deleteForever = async (e, id) => {
     e.stopPropagation();
     setOpenMenuId(null);
 
     if (!window.confirm("Delete forever? This cannot be undone.")) return;
 
-    setDocuments((prevDocs) => {
-      const updated = prevDocs.filter((doc) => doc.id !== id);
-
-      const state = getDocumentsState();
-
-      state[id] = {
-        ...state[id],
-        is_deleted: true,
-        is_trashed: false,
-        is_favorite: false,
-      };
-
-      saveDocumentsState(state);
-      return updated;
-    });
+    try {
+      await api.delete(`documents/${id}/`);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const renameDocument = async (id, title) => {
@@ -284,8 +242,8 @@ function Documents() {
                           setSortMenuOpen(false);
                         }}
                         className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "newest"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-slate-600 hover:bg-slate-50"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         Newest first
@@ -297,8 +255,8 @@ function Documents() {
                           setSortMenuOpen(false);
                         }}
                         className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "oldest"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-slate-600 hover:bg-slate-50"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         Oldest first
@@ -311,8 +269,8 @@ function Documents() {
                   <button
                     onClick={() => setViewMode("grid")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "grid"
-                        ? "bg-white text-slate-700 shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-slate-400 hover:text-slate-600"
                       }`}
                   >
                     <Grid3x3 size={14} /> Grid
@@ -321,8 +279,8 @@ function Documents() {
                   <button
                     onClick={() => setViewMode("list")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "list"
-                        ? "bg-white text-slate-700 shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-slate-400 hover:text-slate-600"
                       }`}
                   >
                     <List size={14} /> List
@@ -352,8 +310,8 @@ function Documents() {
                     if (!doc.is_trashed) navigate(`/editor/${doc.id}`);
                   }}
                   className={`bg-white border border-slate-200/80 rounded-[20px] p-6 flex ${viewMode === "grid"
-                      ? "flex-col justify-between min-h-[190px]"
-                      : "flex-row items-center justify-between"
+                    ? "flex-col justify-between min-h-[190px]"
+                    : "flex-row items-center justify-between"
                     } shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-200 relative group ${doc.is_trashed ? "cursor-default opacity-80" : "cursor-pointer"
                     }`}
                 >
