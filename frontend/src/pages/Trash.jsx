@@ -1,21 +1,67 @@
-import Header from "../components/Header";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
+import api from "../api/api";
 
 function Trash() {
+    const [docs, setDocs] = useState([]);
+
+    useEffect(() => {
+        fetchTrash();
+    }, []);
+
+    const fetchTrash = async () => {
+        const { data } = await api.get("documents/");
+        setDocs(data);
+    };
+
+    const restore = async (id) => {
+        await api.patch(`documents/${id}/`, {
+            is_trashed: false
+        });
+
+        fetchTrash();
+    };
+
+    const deleteForever = async (id) => {
+        await api.delete(`documents/${id}/`);
+        fetchTrash();
+    };
+
+    const trashDocs = docs.filter(d => d.is_trashed);
+
     return (
-        <div className="min-h-screen bg-[#F9FBFD] flex">
+        <div className="min-h-screen flex bg-[#F9FBFD]">
             <Sidebar />
 
-            <div className="flex-1 p-8">
+            <div className="flex-1 flex flex-col">
+                <Header />
 
-                <Header/>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                    Trash
-                </h1>
+                <main className="p-8 max-w-7xl mx-auto w-full">
 
-                <p className="text-slate-500">
-                    Deleted documents will appear here.
-                </p>
+                    <h1 className="text-3xl font-bold mb-4">Trash</h1>
+
+                    {trashDocs.length === 0 ? (
+                        <p>No trashed documents</p>
+                    ) : (
+                        trashDocs.map(doc => (
+                            <div key={doc.id} className="bg-white p-4 border rounded mb-3">
+
+                                <h3>{doc.title}</h3>
+
+                                <button onClick={() => restore(doc.id)}>
+                                    Restore
+                                </button>
+
+                                <button onClick={() => deleteForever(doc.id)}>
+                                    Delete Forever
+                                </button>
+
+                            </div>
+                        ))
+                    )}
+
+                </main>
             </div>
         </div>
     );

@@ -23,9 +23,9 @@ function Editor() {
     fetchDocument();
   }, [id]);
 
-const isOwner = collaborators?.some(
-  (c) => c.id === currentUser?.id && c.role === "owner"
-);
+  const isOwner = collaborators?.some(
+    (c) => c.id === currentUser?.id && c.role === "owner"
+  );
 
   const loadCollaborators = async () => {
     const res = await api.get(`documents/${id}/collaborators/`);
@@ -34,11 +34,32 @@ const isOwner = collaborators?.some(
 
   useEffect(() => {
     loadCollaborators();
+
   }, [id]);
 
   useEffect(() => {
-    api.get("user/")
-      .then(res => setCurrentUser(res.data));
+    console.log("Current User:", currentUser);
+    console.log("Collaborators:", collaborators);
+    console.log("Is Owner:", isOwner);
+  }, [currentUser, collaborators]);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const res = await api.get("user/");
+
+        console.log("User API Response:", res);
+
+        setCurrentUser(res.data);
+
+      } catch (err) {
+
+        console.log("User API Error:", err.response);
+
+      }
+    };
+
+    loadCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -79,14 +100,12 @@ const isOwner = collaborators?.some(
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      console.log("Received:", data);
-
       if (data.type === "online_users") {
         setOnlineUsers(data.users);
         return;
       }
 
-      if (data.message) {
+      if (data.type === "content") {
         isRemote.current = true;
         setContent(data.message);
       }
@@ -173,9 +192,9 @@ const isOwner = collaborators?.some(
 
   const removeCollaborator = async (userId) => {
 
-    if (!window.confirm("Remove this collaborator?"))
+    if (!window.confirm("Remove this collaborator from this document?")) {
       return;
-
+    }
     try {
 
       await api.delete(
@@ -196,32 +215,19 @@ const isOwner = collaborators?.some(
     }
 
   };
+  const updateRole = async (userId, role) => {
+    try {
+      await api.patch(`collaborators/${userId}/`, { role });
 
+      loadCollaborators();
+
+    } catch (err) {
+      alert("Unable to update role");
+    }
+  };
   return (
     <div className="min-h-screen bg-[#F4F7FB]">
-      <div className="collaborators-panel">
-        <h4>Collaborators</h4>
 
-        {collaborators.map(user => (
-          <div
-            key={user.id}
-            className="flex items-center justify-between py-2 border-b"
-          >
-            <div className="font-medium">
-              {user.username} ({user.role})
-            </div>
-
-            {isOwner && user.role !== "owner" && (
-              <button
-                onClick={() => removeCollaborator(user.id)}
-                className="text-red-600 text-sm hover:underline"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
 
@@ -267,10 +273,11 @@ const isOwner = collaborators?.some(
         <div className="flex items-center gap-3">
 
           <button
+            disabled={sharing}
             onClick={() => setShowShareModal(true)}
             className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
           >
-            Share
+            {sharing ? "Sharing..." : "Share"}
           </button>
 
           <button
@@ -307,7 +314,7 @@ const isOwner = collaborators?.some(
           </select>
 
           <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow">
-            S
+            {currentUser?.username?.charAt(0).toUpperCase() || "U"}
           </div>
 
         </div>
@@ -315,37 +322,166 @@ const isOwner = collaborators?.some(
       </header>
 
       {/* Editor Body */}
+      <main className="px-6 py-8">
+        <div className="max-w-[1600px] mx-auto flex gap-8 items-start">
 
-      <main className="py-10 px-6">
+          {/* ================= Editor ================= */}
 
-        <div className="max-w-5xl mx-auto">
+          <section className="flex-1">
 
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 min-h-[85vh] p-10">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-lg min-h-[85vh] p-10">
 
-            <TiptapEditor
-              content={content}
-              setContent={setContent}
-              setStatus={setStatus}
-              socketRef={socketRef}
-              isRemote={isRemote}
-            />
+              <TiptapEditor
+                content={content}
+                setContent={setContent}
+                setStatus={setStatus}
+                socketRef={socketRef}
+                isRemote={isRemote}
+              />
 
-          </div>
+            </div>
+
+          </section>
+
+
+          {/* ================= Sidebar ================= */}
+
+          <aside className="w-[340px] sticky top-24 space-y-6">
+
+            {/* ONLINE USERS */}
+
+            <div className="bg-white rounded-2xl border shadow p-6">
+
+              <h3 className="font-bold text-lg mb-5 flex items-center gap-2">
+
+                🟢 Online Users
+
+              </h3>
+
+              {onlineUsers.length === 0 ? (
+
+                <p className="text-gray-400 text-sm">
+                  Nobody online
+                </p>
+
+              ) : (
+
+                onlineUsers.map((user, index) => (
+
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 py-3 border-b last:border-none"
+                  >
+
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+
+                    <span className="font-medium">
+                      {user}
+                    </span>
+
+                  </div>
+
+                ))
+
+              )}
+
+            </div>
+
+
+
+            {/* COLLABORATORS */}
+
+            <div className="bg-white rounded-2xl border shadow p-6">
+
+              <h3 className="font-bold text-lg mb-5">
+
+                👥 Collaborators
+
+              </h3>
+
+              <div className="max-h-[500px] overflow-y-auto">
+
+                {collaborators.map((user) => (
+
+                  <div
+                    key={user.id}
+                    className="flex justify-between items-center py-4 border-b last:border-none"
+                  >
+
+                    <div>
+
+                      <div className="font-semibold">
+
+                        {user.username}
+
+                        {user.role === "owner" && (
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+
+                            Owner
+
+                          </span>
+                        )}
+
+                      </div>
+
+                      {user.role !== "owner" && (
+
+                        <div className="text-xs text-gray-500 capitalize">
+
+                          {user.role}
+
+                        </div>
+
+                      )}
+
+                    </div>
+
+
+                    {isOwner && user.role !== "owner" ? (
+
+                      <div className="flex items-center gap-2">
+
+                        <select
+                          value={user.role}
+                          onChange={(e) =>
+                            updateRole(user.id, e.target.value)
+                          }
+                          className="border rounded-md px-2 py-1 text-sm"
+                        >
+                          <option value="viewer">
+                            Viewer
+                          </option>
+
+                          <option value="editor">
+                            Editor
+                          </option>
+
+                        </select>
+
+                        <button
+                          onClick={() => removeCollaborator(user.id)}
+                          className="text-red-600 hover:text-red-700 text-sm"
+                        >
+                          ✕
+                        </button>
+
+                      </div>
+
+                    ) : null}
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+          </aside>
 
         </div>
-
       </main>
 
-      <div className="users-panel">
-        <h4>Online Users</h4>
-        {onlineUsers.map((user, idx) => (
-
-          <div key={idx} className="user-badge">
-
-            {user}
-          </div>
-        ))}
-      </div>
 
       {showShareModal && (
         <div
@@ -367,13 +503,10 @@ const isOwner = collaborators?.some(
 
             <input
               type="email"
+              placeholder="Enter collaborator email"
               value={shareEmail}
               onChange={(e) => setShareEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  shareDocument();
-                }
-              }}
+              className="w-full border rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
             />
             <select
               value={shareRole}

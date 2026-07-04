@@ -25,30 +25,36 @@ class IsOwnerOrCollaborator(BasePermission):
 
     def has_object_permission(self, request, view, obj):
 
-        user = request.user
+        print("-------------")
+        print("METHOD:", request.method)
+        print("REQUEST USER:", request.user)
+        print("OWNER:", obj.owner)
 
-        # 1. Owner override (highest priority)
-        if self.is_owner(user, obj):
+        collab = self.get_collaborator(request.user, obj)
+
+        print("COLLAB:", collab)
+
+        if collab:
+            print("ROLE:", collab.role)
+
+        if self.is_owner(request.user, obj):
+            print("OWNER ACCESS")
             return True
 
-        # 2. Check collaboration
-        collab = self.get_collaborator(user, obj)
-
-        # If no access at all
         if not collab:
+            print("NO COLLAB ACCESS")
             return False
 
-        # 3. SAFE READ ACCESS (GET, HEAD, OPTIONS)
         if request.method in ["GET", "HEAD", "OPTIONS"]:
+            print("READ ACCESS")
             return True
 
-        # 4. WRITE ACCESS (UPDATE)
         if request.method in ["PUT", "PATCH"]:
+            print("EDITOR ACCESS")
             return collab.role == "editor"
 
-        # 5. DELETE RULE
         if request.method == "DELETE":
-            return False  # only owner can delete
+            print("DELETE DENIED")
+            return False
 
-        # Default deny
         return False

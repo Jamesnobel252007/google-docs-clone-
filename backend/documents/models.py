@@ -5,6 +5,11 @@ from django.db import models
 from django.conf import settings
 
 class document(models.Model):
+
+    is_favorite = models.BooleanField(default=False)
+    is_trashed = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+
     title = models.CharField(max_length=255)
 
     owner = models.ForeignKey(
