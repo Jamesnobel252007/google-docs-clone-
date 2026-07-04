@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import TiptapEditor from "../components/TiptapEditor";
@@ -19,29 +19,57 @@ function Editor() {
   const [currentUser, setCurrentUser] = useState(null);
   const [collaborators, setCollaborators] = useState([]);
 
-  useEffect(() => {
-    fetchDocument();
-  }, [id]);
-
   const isOwner = collaborators?.some(
     (c) => c.id === currentUser?.id && c.role === "owner"
   );
 
-  const loadCollaborators = async () => {
-    const res = await api.get(`documents/${id}/collaborators/`);
-    setCollaborators(res.data);
-  };
+  const loadCollaborators = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      const res = await api.get(`documents/${id}/collaborators/`);
+      setCollaborators(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [id]);
 
   useEffect(() => {
-    loadCollaborators();
+    const loadDocument = async () => {
+      if (!id) return;
 
+      try {
+        const { data } = await api.get(`documents/${id}/`);
+        setTitle(data.title);
+        setContent(data.content);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadDocument();
+  }, [id]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) return;
+
+      try {
+        const res = await api.get(`documents/${id}/collaborators/`);
+        setCollaborators(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    load();
   }, [id]);
 
   useEffect(() => {
     console.log("Current User:", currentUser);
     console.log("Collaborators:", collaborators);
     console.log("Is Owner:", isOwner);
-  }, [currentUser, collaborators]);
+  }, [currentUser, collaborators, isOwner]);
 
   useEffect(() => {
     const loadCurrentUser = async () => {
@@ -76,59 +104,52 @@ function Editor() {
     };
   }, []);
 
-  useEffect(() => {
-    if (status !== "Unsaved changes") return;
+useEffect(() => {
+  if (!id) return;
 
-    const timer = setTimeout(() => {
-      saveDocument();
-    }, 1500);
+  const token = localStorage.getItem("access");
+  if (!token) return;
 
-    return () => clearTimeout(timer);
-  }, [content, title]);
+  const socket = new WebSocket(
+    `ws://127.0.0.1:8000/ws/documents/${id}/?token=${token}`
+  );
 
-  useEffect(() => {
-    const token = localStorage.getItem("access");
+  socketRef.current = socket;
 
-    socketRef.current = new WebSocket(
-      `ws://127.0.0.1:8000/ws/documents/${id}/?token=${token}`
-    );
+  socket.onopen = () => {
+    console.log("✅ WebSocket Connected");
+  };
 
-    socketRef.current.onopen = () => {
-      console.log("WS connected");
-    };
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
 
-    socketRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    if (data.type === "online_users") {
+       console.log("🟢 ONLINE USERS UPDATE:", data.users);
+      setOnlineUsers(data.users);
+      return;
+    }
 
-      if (data.type === "online_users") {
-        setOnlineUsers(data.users);
-        return;
-      }
-
-      if (data.type === "content") {
-        isRemote.current = true;
-        setContent(data.message);
-      }
-    };
-
-    return () => {
-      socketRef.current.close();
-    };
-  }, [id]);
-
-  window.socketRef = socketRef;
-
-  const fetchDocument = async () => {
-    try {
-      const { data } = await api.get(`documents/${id}/`);
-
-      setTitle(data.title);
-      setContent(data.content);
-
-    } catch (err) {
-      console.error(err);
+    if (data.type === "content") {
+      isRemote.current = true;
+      setContent(data.message);
     }
   };
+
+  socket.onerror = (e) => {
+    console.error("WS Error", e);
+  };
+
+  socket.onclose = (e) => {
+    console.log("WS Closed", e.code, e.reason);
+  };
+
+  return () => {
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+  };
+}, [id]);
 
   const shareDocument = async () => {
     if (!shareEmail.trim()) return;
@@ -221,7 +242,8 @@ function Editor() {
 
       loadCollaborators();
 
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       alert("Unable to update role");
     }
   };

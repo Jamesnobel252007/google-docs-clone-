@@ -4,7 +4,7 @@ from pydoc import doc
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from collaboration.models import Collaborator
-from .models import document
+from .models import Document
 from .serializers import DocumentSerializer
 from rest_framework.viewsets import ModelViewSet
 from collaboration.permissions import IsOwnerOrCollaborator
@@ -17,10 +17,10 @@ class DocumentViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrCollaborator]
 
     def get_queryset(self):
-        return document.objects.filter(
-        Q(owner=self.request.user) |
-        Q(collaborators__user=self.request.user)
-    ).distinct()
+        return Document.objects.filter(
+            Q(owner=self.request.user) |
+            Q(collaborators__user=self.request.user)
+        ).distinct()
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

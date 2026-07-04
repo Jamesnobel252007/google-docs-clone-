@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import document  # also fix casing if needed
+from .models import Document  # also fix casing if needed
 
 
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     is_deleted = serializers.BooleanField(required=False)
 
     class Meta:
-        model = document
+        model = Document
         fields = [
             "id",
             "title",

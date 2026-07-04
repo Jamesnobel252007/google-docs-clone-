@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.models import User
-from documents.models import document
+from documents.models import Document
 from .models import Collaborator
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -25,10 +25,10 @@ class ShareDocumentView(APIView):
     def post(self, request):
 
         try:
-            doc = document.objects.get(
+            doc = Document.objects.get(
                 id=request.data["document_id"]
             )
-        except document.DoesNotExist:
+        except Document.DoesNotExist:
             return Response(
                 {"error": "Document not found"},
                 status=404

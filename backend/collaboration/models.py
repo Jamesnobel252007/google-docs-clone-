@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 from django.db import models
 from django.conf import settings
-from documents.models import document
+from documents.models import Document
 
 
 class Collaborator(models.Model):
@@ -19,7 +19,7 @@ class Collaborator(models.Model):
     )
 
     document = models.ForeignKey(
-        document,
+        Document,
         on_delete=models.CASCADE,
         related_name="collaborators"
     )

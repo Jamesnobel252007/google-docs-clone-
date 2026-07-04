@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -8,8 +8,9 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import FontFamily from "@tiptap/extension-font-family";
 
-function TiptapEditor({ content, setContent, setStatus, socketRef, isRemote }) {
+function TiptapEditor({ content, setContent, setStatus, socketRef }) {
   const [align, setAlign] = useState("");
+  const remoteUpdateRef = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -22,28 +23,36 @@ function TiptapEditor({ content, setContent, setStatus, socketRef, isRemote }) {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: content || "<p></p>",
-   onUpdate: ({ editor }) => {
-  if (isRemote.current) {
-    isRemote.current = false;
-    return;
-  }
 
-  const html = editor.getHTML();
+    onUpdate: ({ editor }) => {
+      if (remoteUpdateRef.current) {
+        remoteUpdateRef.current = false;
+        return;
+      }
 
-  setContent(html);
-  setStatus("Unsaved changes");
+      const html = editor.getHTML();
 
-  socketRef.current?.send(
-    JSON.stringify({
-      message: html,
-    })
-  );
-},
+      setContent(html);
+      setStatus("Unsaved changes");
+
+      if (
+        socketRef.current &&
+        socketRef.current.readyState === WebSocket.OPEN
+      ) {
+        socketRef.current.send(
+          JSON.stringify({
+            type: "content",
+            message: html,
+          })
+        );
+      }
+    },
   });
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content || "<p></p>");
+      remoteUpdateRef.current = true;
+      editor.commands.setContent(content || "<p></p>", false);
     }
   }, [content, editor]);
 

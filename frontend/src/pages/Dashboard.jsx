@@ -14,13 +14,10 @@ function Dashboard() {
 
   const navigate = useNavigate();
 
-
   const fetchDocuments = async () => {
     try {
       const response = await api.get("documents/");
-
       setDocuments(response.data);
-
       console.log(response.data);
     } catch (error) {
       console.error(error);
@@ -28,10 +25,18 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    fetchDocuments();
+    const loadDocuments = async () => {
+      try {
+        const response = await api.get("documents/");
+        setDocuments(response.data);
+        console.log(response.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadDocuments();
   }, []);
-
-
 
   const createDocument = async () => {
     try {

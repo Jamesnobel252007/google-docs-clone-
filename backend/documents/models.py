@@ -4,7 +4,7 @@ from django.db import models
 from django.db import models
 from django.conf import settings
 
-class document(models.Model):
+class Document(models.Model):
 
     is_favorite = models.BooleanField(default=False)
     is_trashed = models.BooleanField(default=False)
