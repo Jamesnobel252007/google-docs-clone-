@@ -39,21 +39,19 @@ function Dashboard() {
   }, []);
 
   const createDocument = async () => {
-    try {
-      const response = await api.post("documents/", {
-        title: "Untitled Document",
-        content: "<p></p>",
-      });
+  try {
+    const response = await api.post("documents/", {
+      title: "Untitled Document",
+      content: "<p></p>",
+    });
 
-      console.log(response.data);
-
-      fetchDocuments();
-
-      navigate(`/editor/${response.data.id}`);
-    } catch (error) {
-      console.error(error.response?.data || error);
-    }
-  };
+    await fetchDocuments();
+    navigate(`/editor/${response.data.id}`);
+  } catch (error) {
+    console.log("STATUS:", error.response?.status);
+    console.log("DATA:", error.response?.data);
+  }
+};
 
   const deleteDocument = async (e, id) => {
     e.stopPropagation();

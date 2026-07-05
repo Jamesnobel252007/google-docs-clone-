@@ -218,7 +218,7 @@ class SharedViewSet(viewsets.ViewSet):
 
     def list_shared_to_me(self, request):
         docs = Document.objects.filter(
-            collaborator__user=request.user
+            collaborators__user=request.user
         )
         return Response(DocumentSerializer(docs, many=True).data)
 

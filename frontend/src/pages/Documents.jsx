@@ -94,16 +94,16 @@ function Documents() {
   };
 
   const toggleFavorite = async (e, id) => {
-    e.stopPropagation();
-    setOpenMenuId(null);
+  e.stopPropagation();
 
-    try {
-      await api.patch(`documents/${id}/favorite/`);
-      fetchDocuments();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  console.log("Favorite clicked:", id);
+
+  await api.patch(`documents/${id}/favorite/`);
+
+  console.log("Favorite request sent");
+
+  fetchDocuments();
+};
 
   const moveToTrash = async (e, id) => {
     e.stopPropagation();
@@ -120,16 +120,16 @@ function Documents() {
   };
 
   const restoreDocument = async (e, id) => {
-    e.stopPropagation();
-    setOpenMenuId(null);
+  e.stopPropagation();
 
-    try {
-      await api.patch(`documents/${id}/restore/`);
-      fetchDocuments();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  console.log("Restore clicked:", id);
+
+  await api.patch(`documents/${id}/restore/`);
+
+  console.log("Restore request sent");
+
+  fetchDocuments();
+};
 
   const deleteForever = async (e, id) => {
     e.stopPropagation();
