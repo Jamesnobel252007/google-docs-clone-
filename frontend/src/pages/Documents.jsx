@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
 // TEMP MOCK — swap for real API calls once your friend's backend is ready.
 // Expected endpoints:
 //   GET    /api/documents/                 -> list all (non-trashed) docs
@@ -157,7 +158,9 @@ export default function Documents() {
 
   return (
     <div className="p-8 max-w-6xl">
+      <Header />
       <div className="flex items-start justify-between mb-6">
+        <Sidebar />
         <div>
           <h1 className="text-2xl font-semibold text-[#12141C] mb-1">{pageTitle}</h1>
           <p className="text-sm text-[#6B7280]">{pageSubtitle}</p>

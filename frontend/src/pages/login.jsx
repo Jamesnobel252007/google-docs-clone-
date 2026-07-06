@@ -14,7 +14,7 @@ const COLLABORATORS = [
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,8 +28,8 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    if (!form.email || !form.password) {
-      setError("Enter your email and password to continue.");
+    if (!form.username || !form.password) {
+      setError("Enter your username and password to continue.");
       return;
     }
 
@@ -38,12 +38,12 @@ export default function Login() {
       const res = await fetch(`${API_BASE}/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+        body: JSON.stringify({ username: form.username, password: form.password }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Incorrect email or password.");
+        throw new Error(data.detail || "Incorrect username or password.");
       }
 
       const data = await res.json();
@@ -154,17 +154,17 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-xs font-medium text-[#12141C] mb-1.5"
               >
-                Email
+                Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={form.email}
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                value={form.username}
                 onChange={handleChange}
                 placeholder="you@example.com"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"

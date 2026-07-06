@@ -12,7 +12,7 @@ const COLLABORATORS = [
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -30,7 +30,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+    if (!form.username || !form.email || !form.password || !form.confirmPassword) {
       setError("Fill in every field to create your account.");
       return;
     }
@@ -49,7 +49,7 @@ export default function Register() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name,
+          username: form.username,
           email: form.email,
           password: form.password,
         }),
@@ -60,10 +60,17 @@ export default function Register() {
         throw new Error(data.detail || "Couldn't create your account.");
       }
 
+      await res.json();
       const data = await res.json();
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
-      navigate("/dashboard");
+
+      console.log(data);
+
+      if (!res.ok) {
+        throw new Error(data.error || data.detail || "Registration failed");
+      }
+      alert("Registration successful!");
+
+      navigate("/");
     } catch (err) {
       setError(err.message || "Something went wrong. Try again.");
     } finally {
@@ -166,19 +173,20 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
               <label
-                htmlFor="name"
+                htmlFor="username"
                 className="block text-xs font-medium text-[#12141C] mb-1.5"
               >
-                Full name
+                Username
               </label>
+
               <input
-                id="name"
-                name="name"
+                id="username"
+                name="username"
                 type="text"
-                autoComplete="name"
-                value={form.name}
+                autoComplete="username"
+                value={form.username}
                 onChange={handleChange}
-                placeholder="Sujay Kumar"
+                placeholder="james_nobel"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"
               />
             </div>
