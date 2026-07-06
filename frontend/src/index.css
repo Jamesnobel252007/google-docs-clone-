@@ -1,13 +1,11 @@
 @import 'tailwindcss';
 
-
 :root {
   font-family: Arial, Helvetica, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light;
-  /* changed from light dark */
   color: #202124;
   background-color: #ffffff;
 
@@ -17,10 +15,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 body {
@@ -34,7 +34,6 @@ body {
   width: 100%;
   min-height: 100vh;
 }
-
 
 h2,
 h3,
@@ -53,6 +52,7 @@ input {
   color: #202124;
 }
 
+/* Editor content styling */
 .ProseMirror {
   outline: none !important;
   border: none !important;
@@ -65,26 +65,6 @@ input {
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
-}
-
-.ProseMirror p {
-  margin: 0;
-}
-
-.ProseMirror {
-  outline: none !important;
-  min-height: 750px;
-  color: #202124;
-}
-
-.ProseMirror p {
-  margin: 0 0 12px;
-}
-
-.ProseMirror {
-  outline: none !important;
-  min-height: 700px;
-  color: #202124;
 }
 
 .ProseMirror p {
