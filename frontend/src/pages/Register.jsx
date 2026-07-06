@@ -1,167 +1,291 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from '../api/api';
-function Register() {
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const navigate = useNavigate();
+import { useNavigate, Link } from "react-router-dom";
 
-    const handleRegister = async (e) => {
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+
+const COLLABORATORS = [
+  { name: "Aditi", color: "#3D5AFE", top: "22%", left: "58%" },
+  { name: "Ravi", color: "#F5A524", top: "48%", left: "20%" },
+  { name: "Meera", color: "#2ECC71", top: "68%", left: "62%" },
+];
+
+export default function Register() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (error) setError("");
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    try {
-        const response = await api.post("users/register/", {
-            username,
-            email,
-            password,
-        });
-
-        console.log(response.data);
-
-        alert("Account created successfully!");
-
-        navigate("/");
-    } catch (error) {
-        console.error(error.response?.data);
-
-        alert("Registration failed.: " + error.response?.data);
+    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+      setError("Fill in every field to create your account.");
+      return;
     }
-};
+    if (form.password.length < 8) {
+      setError("Password needs to be at least 8 characters.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
 
-    return (
-        <div className="min-h-screen bg-[#F9FBFD] flex flex-col items-center justify-center p-4 font-sans antialiased selection:bg-blue-100">
-            {/* Top Minimal Branding Header */}
-            <div className="mb-8 flex items-center space-x-2.5">
-                <div className="h-9 w-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-lg flex items-center justify-center text-white font-black shadow-md shadow-blue-200/50 tracking-wider text-sm">
-                    VD
-                </div>
-                <span className="text-2xl font-semibold tracking-tight text-slate-800">VDocs</span>
-            </div>
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        }),
+      });
 
-            {/* Main Form Box Container */}
-            <form
-                className="w-full max-w-md bg-white border border-slate-200/70 rounded-2xl p-8 md:p-10 shadow-xl shadow-slate-200/30 flex flex-col"
-                onSubmit={handleRegister}
-            >
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Create an account</h1>
-                <p className="text-sm text-slate-500 mb-6">Get started with your collaborative document workspace</p>
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Couldn't create your account.");
+      }
 
-                {/* Username Input */}
-                <div className="mb-4">
-                    <input
-                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
-                        type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                    />
-                </div>
-                {/* Email Input */}
-                <div className="mb-4">
-                    <input
-                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
+      const data = await res.json();
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                {/* Password Input */}
-                <div className="mb-6">
-                    <input
-                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-4 py-3 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                </div>
+  return (
+    <div className="min-h-screen w-full flex bg-[#FAFAF7] font-[Inter,system-ui,sans-serif]">
+      {/* LEFT — editor panel, same as Login */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-[#12141C] overflow-hidden flex-col justify-between p-12">
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
 
-                {/* Submit Action Button */}
-                <button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm shadow-blue-200 transition-all active:scale-[0.99] mb-4"
-                    type="submit"
-                >
-                    Register
-                </button>
-
-                {/* Back to Login Redirect Link */}
-                <button
-                    type="button"
-                    onClick={() => navigate("/")}
-                    className="text-center text-xs md:text-sm text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-4 transition bg-transparent border-none cursor-pointer focus:outline-none"
-                >
-                    Already have an account? Sign in
-                </button>
-            </form>
-
-            {/* Soft Footer Detail */}
-            <div className="mt-8 text-xs text-slate-400 font-medium tracking-wide">
-                &copy; 2026 VDocs Suite
-            </div>
+        <div className="relative z-10 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-md bg-[#3D5AFE] flex items-center justify-center">
+            <span className="text-white text-sm font-semibold">V</span>
+          </div>
+          <span className="text-white text-lg font-serif tracking-tight">VDocs</span>
         </div>
-    );
+
+        <div className="relative z-10 flex-1 flex items-center">
+          <div className="relative w-full max-w-md bg-[#1B1E29] border border-white/10 rounded-xl p-6 shadow-2xl">
+            <div className="flex items-center gap-1.5 mb-5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#E64848]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F5A524]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2ECC71]" />
+              <span className="ml-3 text-[11px] font-mono text-white/30 tracking-wide">
+                Getting started.doc
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              <div className="h-2.5 bg-white/20 rounded w-3/4" />
+              <div className="h-2.5 bg-white/10 rounded w-full" />
+              <div className="h-2.5 bg-white/10 rounded w-5/6" />
+              <div className="h-2.5 bg-white/10 rounded w-2/3" />
+              <div className="h-2.5 bg-white/10 rounded w-full" />
+              <div className="h-2.5 bg-white/10 rounded w-1/2" />
+            </div>
+
+            {COLLABORATORS.map((c) => (
+              <div
+                key={c.name}
+                className="absolute flex items-center gap-1.5 animate-pulse"
+                style={{ top: c.top, left: c.left }}
+              >
+                <span
+                  className="w-0.5 h-4 rounded-sm"
+                  style={{ backgroundColor: c.color }}
+                />
+                <span
+                  className="text-[10px] font-medium text-white px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: c.color }}
+                >
+                  {c.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="relative z-10 text-white/40 text-sm leading-relaxed max-w-sm">
+          Every document, one workspace. Write, organize, and — soon —
+          edit together in real time.
+        </p>
+      </div>
+
+      {/* RIGHT — form panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-sm">
+          <div className="lg:hidden flex items-center gap-2 mb-10">
+            <div className="w-7 h-7 rounded-md bg-[#3D5AFE] flex items-center justify-center">
+              <span className="text-white text-sm font-semibold">V</span>
+            </div>
+            <span className="text-[#12141C] text-lg font-serif tracking-tight">
+              VDocs
+            </span>
+          </div>
+
+          <p className="text-[11px] font-mono uppercase tracking-widest text-[#3D5AFE] mb-3">
+            Get started
+          </p>
+          <h1 className="text-3xl font-serif text-[#12141C] mb-2">
+            Create your account
+          </h1>
+          <p className="text-sm text-[#6B7280] mb-8">
+            Already have an account?{" "}
+            <Link to="/" className="text-[#3D5AFE] font-medium hover:underline">
+              Log in
+            </Link>
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-xs font-medium text-[#12141C] mb-1.5"
+              >
+                Full name
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Sujay Kumar"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-xs font-medium text-[#12141C] mb-1.5"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-xs font-medium text-[#12141C] mb-1.5"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="At least 8 characters"
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B7280] hover:text-[#12141C]"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-xs font-medium text-[#12141C] mb-1.5"
+              >
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Re-enter your password"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE] transition"
+              />
+            </div>
+
+            {error && (
+              <div className="text-sm text-[#B42318] bg-[#FEF3F2] border border-[#FDA29B] rounded-lg px-3 py-2">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded-lg bg-[#12141C] text-white text-sm font-medium hover:bg-[#1B1E29] active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </button>
+          </form>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="h-px flex-1 bg-[#E6E4DD]" />
+            <span className="text-xs text-[#9CA3AF]">or</span>
+            <div className="h-px flex-1 bg-[#E6E4DD]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => alert("Wire this up to your Google OAuth flow when ready.")}
+            className="w-full py-2.5 rounded-lg border border-[#E6E4DD] bg-white text-sm font-medium text-[#12141C] hover:bg-[#F5F4F0] transition flex items-center justify-center gap-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.69-2.26 1.1-3.71 1.1-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.14c-.22-.69-.35-1.42-.35-2.14s.13-1.45.35-2.14V7.02H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.98l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.02l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Continue with Google
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#f1f5f9",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    width: "420px",
-    background: "white",
-    padding: "45px",
-    borderRadius: "24px",
-    boxShadow: "0 24px 55px rgba(15,23,42,0.18)",
-    textAlign: "center",
-  },
-  logo: {
-    width: "95px",
-    height: "95px",
-    objectFit: "contain",
-    marginBottom: "10px",
-  },
-  title: {
-    fontSize: "32px",
-    marginBottom: "25px",
-  },
-  input: {
-    width: "100%",
-    padding: "17px",
-    marginTop: "16px",
-    border: "1px solid #d1d5db",
-    borderRadius: "14px",
-    fontSize: "16px",
-    boxSizing: "border-box",
-  },
-  button: {
-    width: "100%",
-    padding: "17px",
-    marginTop: "26px",
-    border: "none",
-    borderRadius: "14px",
-    background: "#1a73e8",
-    color: "white",
-    fontSize: "18px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  text: {
-    marginTop: "25px",
-    color: "#64748b",
-    fontSize: "16px",
-  },
-  link: {
-    color: "#1a73e8",
-    fontWeight: "700",
-    cursor: "pointer",
-  },
-};
-
-export default Register;

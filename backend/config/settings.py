@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'users',
     'documents',
     'channels',
+    'comments',
     'collaboration',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -140,7 +142,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 STATIC_URL = 'static/'
 
-AUTH_USER_MODEL = "users.User"
 
 CHANNEL_LAYERS = {
     "default": {

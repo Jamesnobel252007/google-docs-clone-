@@ -1,551 +1,428 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import api from "../api/api";
-import {
-  FileText,
-  Trash2,
-  Search,
-  Plus,
-  MoreHorizontal,
-  Grid3x3,
-  List,
-  ArrowUpDown,
-  ChevronDown,
-  Star,
-  RotateCcw,
-} from "lucide-react";
-import Header from "../components/Header";
+import { useLocation, useNavigate } from "react-router-dom";
 
-function Documents() {
-  const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editingTitle, setEditingTitle] = useState("");
-  const [search, setSearch] = useState("");
-  const [documents, setDocuments] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const [sortOrder, setSortOrder] = useState("newest");
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+// TEMP MOCK — swap for real API calls once your friend's backend is ready.
+// Expected endpoints:
+//   GET    /api/documents/                 -> list all (non-trashed) docs
+//   PATCH  /api/documents/:id/             -> rename, { title }
+//   PATCH  /api/documents/:id/favorite/    -> toggle favorite, { isFavorite }
+//   PATCH  /api/documents/:id/trash/       -> move to trash, { isTrashed: true }
+//   PATCH  /api/documents/:id/restore/     -> restore from trash, { isTrashed: false }
+//   DELETE /api/documents/:id/             -> permanently delete (only from trash)
+const USE_MOCK = true;
 
-  const navigate = useNavigate();
+const MOCK_DOCS = [
+  { id: 1, title: "Getting started", updatedAt: "2026-07-04T10:20:00Z", isFavorite: true, isTrashed: false },
+  { id: 2, title: "Client proposal draft", updatedAt: "2026-07-03T15:45:00Z", isFavorite: false, isTrashed: false },
+  { id: 3, title: "Team notes — sprint 4", updatedAt: "2026-07-02T09:10:00Z", isFavorite: true, isTrashed: false },
+  { id: 4, title: "Product brief v2", updatedAt: "2026-06-30T18:00:00Z", isFavorite: false, isTrashed: false },
+  { id: 5, title: "Old meeting notes", updatedAt: "2026-06-20T11:00:00Z", isFavorite: false, isTrashed: true },
+  { id: 6, title: "Draft — unused", updatedAt: "2026-06-18T08:30:00Z", isFavorite: false, isTrashed: true },
+];
+
+async function fetchDocuments() {
+  if (USE_MOCK) {
+    return new Promise((resolve) => setTimeout(() => resolve(MOCK_DOCS), 300));
+  }
+  const res = await fetch("/api/documents/");
+  if (!res.ok) throw new Error("Couldn't load documents.");
+  return res.json();
+}
+
+function timeAgo(dateString) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateString).toLocaleDateString();
+}
+
+export default function Documents() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const pageType =
-    location.pathname === "/favorites"
-      ? "favorites"
-      : location.pathname === "/trash"
-        ? "trash"
-        : "documents";
+  const mode = location.pathname.includes("/favorites")
+    ? "favorites"
+    : location.pathname.includes("/trash")
+    ? "trash"
+    : "all";
 
-  const pageTitle =
-    pageType === "favorites"
-      ? "Favorite Documents"
-      : pageType === "trash"
-        ? "Trash"
-        : "All Documents";
-
-
-
-
-
-  const fetchDocuments = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get("documents/");
-
-      setDocuments(data); // 🔥 backend is source of truth
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [view, setView] = useState("grid");
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
-    const loadDocuments = async () => {
-      try {
-        setLoading(true);
-        const { data } = await api.get("documents/");
-
-        setDocuments(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDocuments();
+    fetchDocuments()
+      .then(setDocs)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  const createDocument = async () => {
-    try {
-      const response = await api.post("documents/", {
-        title: "Untitled Document",
-        content: "<p></p>",
-      });
-
-      fetchDocuments();
-      navigate(`/editor/${response.data.id}`);
-    } catch (error) {
-      console.error(error.response?.data || error);
-    }
-  };
-
-  const toggleFavorite = async (e, id) => {
-  e.stopPropagation();
-
-  console.log("Favorite clicked:", id);
-
-  await api.patch(`documents/${id}/favorite/`);
-
-  console.log("Favorite request sent");
-
-  fetchDocuments();
-};
-
-  const moveToTrash = async (e, id) => {
-    e.stopPropagation();
-    setOpenMenuId(null);
-
-    if (!window.confirm("Move this document to trash?")) return;
-
-    try {
-      await api.patch(`documents/${id}/trash/`);
-      fetchDocuments();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const restoreDocument = async (e, id) => {
-  e.stopPropagation();
-
-  console.log("Restore clicked:", id);
-
-  await api.patch(`documents/${id}/restore/`);
-
-  console.log("Restore request sent");
-
-  fetchDocuments();
-};
-
-  const deleteForever = async (e, id) => {
-    e.stopPropagation();
-    setOpenMenuId(null);
-
-    if (!window.confirm("Delete forever? This cannot be undone.")) return;
-
-    try {
-      await api.delete(`documents/${id}/`);
-      fetchDocuments();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const renameDocument = async (id, title) => {
-    try {
-      await api.patch(`documents/${id}/`, { title });
-      fetchDocuments();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const filteredAndSortedDocuments = useMemo(() => {
-    let filtered = documents;
-
-    if (pageType === "documents") {
-      filtered = filtered.filter((doc) => !doc.is_trashed);
-    }
-
-    if (pageType === "favorites") {
-      filtered = filtered.filter((doc) => doc.is_favorite && !doc.is_trashed);
-    }
-
-    if (pageType === "trash") {
-      filtered = filtered.filter((doc) => doc.is_trashed);
-    }
-
-    filtered = filtered.filter((doc) =>
-      doc.title.toLowerCase().includes(search.toLowerCase())
+  const filteredDocs = useMemo(() => {
+    let result = docs.filter((d) =>
+      mode === "trash" ? d.isTrashed : mode === "favorites" ? d.isFavorite && !d.isTrashed : !d.isTrashed
     );
 
-    return [...filtered].sort((a, b) => {
-      if (sortOrder === "newest") {
-        return new Date(b.updated_at) - new Date(a.updated_at);
-      }
+    if (search.trim()) {
+      result = result.filter((d) =>
+        d.title.toLowerCase().includes(search.trim().toLowerCase())
+      );
+    }
 
-      return new Date(a.updated_at) - new Date(b.updated_at);
+    result = [...result].sort((a, b) => {
+      const diff = new Date(b.updatedAt) - new Date(a.updatedAt);
+      return sortOrder === "newest" ? diff : -diff;
     });
-  }, [documents, search, sortOrder, pageType]);
+
+    return result;
+  }, [docs, mode, search, sortOrder]);
+
+  const updateDoc = (id, changes) => {
+    // Swap this for the matching PATCH/DELETE call for each action.
+    setDocs((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
+  };
+
+  const deleteForever = (id) => {
+    setDocs((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const toggleFavorite = (doc) => {
+    updateDoc(doc.id, { isFavorite: !doc.isFavorite });
+    setOpenMenuId(null);
+  };
+
+  const moveToTrash = (doc) => {
+    updateDoc(doc.id, { isTrashed: true });
+    setOpenMenuId(null);
+  };
+
+  const restoreDoc = (doc) => {
+    updateDoc(doc.id, { isTrashed: false });
+    setOpenMenuId(null);
+  };
+
+  const startRename = (doc) => {
+    setRenamingId(doc.id);
+    setRenameValue(doc.title);
+    setOpenMenuId(null);
+  };
+
+  const commitRename = (doc) => {
+    const trimmed = renameValue.trim();
+    if (trimmed) updateDoc(doc.id, { title: trimmed });
+    setRenamingId(null);
+  };
+
+  const pageTitle =
+    mode === "favorites" ? "Favorites" : mode === "trash" ? "Trash" : "Documents";
+
+  const pageSubtitle =
+    mode === "favorites"
+      ? "Documents you've starred."
+      : mode === "trash"
+      ? "Items here are removed after 30 days."
+      : "All your documents in one place.";
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        Loading...
+      <div className="p-8">
+        <div className="h-8 w-48 bg-[#F1EFE8] rounded animate-pulse mb-8" />
+        <div className="grid grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-[#F1EFE8] rounded-xl animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  const collaboratorColors = ["bg-rose-400", "bg-amber-400", "bg-emerald-400"];
-  const sortLabel = sortOrder === "newest" ? "Newest first" : "Oldest first";
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-[#FEF3F2] border border-[#FDA29B] text-[#B42318] text-sm rounded-lg px-4 py-3 max-w-md">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="min-h-screen bg-[#F9FBFD] text-slate-800 flex font-sans selection:bg-blue-100"
-      onClick={() => {
-        setOpenMenuId(null);
-        setSortMenuOpen(false);
-      }}
-    >
-      <Sidebar />
+    <div className="p-8 max-w-6xl">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#12141C] mb-1">{pageTitle}</h1>
+          <p className="text-sm text-[#6B7280]">{pageSubtitle}</p>
+        </div>
+        {mode === "all" && (
+          <button
+            onClick={() => navigate("/editor/new")}
+            className="px-4 py-2.5 rounded-lg bg-[#3D5AFE] text-white text-sm font-medium hover:bg-[#2F46D6] active:scale-[0.98] transition"
+          >
+            + New document
+          </button>
+        )}
+      </div>
 
-      <div className="flex-1 flex flex-col">
-        <Header search={search} setSearch={setSearch} />
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search documents..."
+          className="flex-1 min-w-[200px] px-3.5 py-2 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#3D5AFE]/25 focus:border-[#3D5AFE] transition"
+        />
 
-        <div className="flex-1 flex flex-col">
-          <main className="p-8 max-w-7xl w-full mx-auto relative flex-1 pb-24">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                  {pageTitle}
-                </h1>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-[#E6E4DD] bg-white text-sm text-[#12141C] outline-none focus:ring-2 focus:ring-[#3D5AFE]/25"
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+        </select>
 
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {filteredAndSortedDocuments.length}{" "}
-                  {filteredAndSortedDocuments.length === 1
-                    ? "document"
-                    : "documents"}{" "}
-                  in this section
-                </p>
-              </div>
+        <div className="flex border border-[#E6E4DD] rounded-lg overflow-hidden">
+          <button
+            onClick={() => setView("grid")}
+            className={`px-3 py-2 text-sm ${
+              view === "grid" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
+            }`}
+          >
+            Grid
+          </button>
+          <button
+            onClick={() => setView("list")}
+            className={`px-3 py-2 text-sm border-l border-[#E6E4DD] ${
+              view === "list" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
+            }`}
+          >
+            List
+          </button>
+        </div>
+      </div>
 
-              <div className="flex items-center space-x-3">
-                <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => setSortMenuOpen((v) => !v)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-sm"
-                  >
-                    <ArrowUpDown size={14} />
-                    {sortLabel}
-                    <ChevronDown size={14} className="text-slate-400" />
-                  </button>
-
-                  {sortMenuOpen && (
-                    <div className="absolute right-0 top-11 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 py-1.5 w-40 z-10">
-                      <button
-                        onClick={() => {
-                          setSortOrder("newest");
-                          setSortMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "newest"
-                          ? "text-blue-600 bg-blue-50"
-                          : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                      >
-                        Newest first
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setSortOrder("oldest");
-                          setSortMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition ${sortOrder === "oldest"
-                          ? "text-blue-600 bg-blue-50"
-                          : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                      >
-                        Oldest first
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "grid"
-                      ? "bg-white text-slate-700 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                      }`}
-                  >
-                    <Grid3x3 size={14} /> Grid
-                  </button>
-
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${viewMode === "list"
-                      ? "bg-white text-slate-700 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                      }`}
-                  >
-                    <List size={14} /> List
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {viewMode === "list" && filteredAndSortedDocuments.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                <span>Name</span>
-                <span className="pr-10">Updated</span>
-              </div>
-            )}
-
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-                  : "flex flex-col gap-3"
-              }
-            >
-              {filteredAndSortedDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  onClick={() => {
-                    if (!doc.is_trashed) navigate(`/editor/${doc.id}`);
-                  }}
-                  className={`bg-white border border-slate-200/80 rounded-[20px] p-6 flex ${viewMode === "grid"
-                    ? "flex-col justify-between min-h-[190px]"
-                    : "flex-row items-center justify-between"
-                    } shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-200 relative group ${doc.is_trashed ? "cursor-default opacity-80" : "cursor-pointer"
-                    }`}
-                >
-                  <div className="flex items-start justify-between w-full">
-                    <div className="flex items-center gap-4">
-                      <div className="h-11 w-11 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
-                        <FileText size={19} strokeWidth={2.25} />
-                      </div>
-
-                      {viewMode === "list" && (
-                        <div>
-                          {editingId === doc.id ? (
-                            <input
-                              autoFocus
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              onBlur={() => {
-                                renameDocument(doc.id, editingTitle);
-                                setEditingId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  renameDocument(doc.id, editingTitle);
-                                  setEditingId(null);
-                                }
-                              }}
-                              className="font-bold text-base border rounded px-2 py-1 w-full"
-                            />
-                          ) : (
-                            <h3
-                              onDoubleClick={(e) => {
-                                if (doc.is_trashed) return;
-                                e.stopPropagation();
-                                setEditingId(doc.id);
-                                setEditingTitle(doc.title);
-                              }}
-                              className="font-bold text-slate-900 text-base hover:text-blue-600 cursor-text"
-                            >
-                              {doc.title}
-                            </h3>
-                          )}
-
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              Updated {new Date(doc.updated_at).toLocaleString()}
-                            </span>
-
-                            {doc.is_favorite && (
-                              <span className="text-[10px] bg-yellow-50 text-yellow-600 font-bold px-2 py-0.5 rounded-md border border-yellow-200">
-                                Favorite
-                              </span>
-                            )}
-
-                            {doc.is_trashed && (
-                              <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded-md border border-red-200">
-                                Trashed
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {viewMode === "list" && (
-                        <div className="flex -space-x-2 mr-2">
-                          {collaboratorColors.map((color, i) => (
-                            <div
-                              key={i}
-                              className={`h-6 w-6 rounded-full ${color} border-2 border-white`}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div
-                        className="relative"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() =>
-                            setOpenMenuId(openMenuId === doc.id ? null : doc.id)
-                          }
-                          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-slate-600 p-1.5 rounded-lg transition-all"
-                        >
-                          <MoreHorizontal size={17} />
-                        </button>
-
-                        {openMenuId === doc.id && (
-                          <div className="absolute right-0 top-9 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/60 py-1.5 w-44 z-10">
-                            {!doc.is_trashed ? (
-                              <>
-                                <button
-                                  onClick={(e) => toggleFavorite(e, doc.id)}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-yellow-600 hover:bg-yellow-50 transition flex items-center gap-2"
-                                >
-                                  <Star size={13} />
-                                  {doc.is_favorite
-                                    ? "Remove Favorite"
-                                    : "Add Favorite"}
-                                </button>
-
-                                <button
-                                  onClick={(e) => moveToTrash(e, doc.id)}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition flex items-center gap-2"
-                                >
-                                  <Trash2 size={13} />
-                                  Move to Trash
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={(e) => restoreDocument(e, doc.id)}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-green-600 hover:bg-green-50 transition flex items-center gap-2"
-                                >
-                                  <RotateCcw size={13} />
-                                  Restore
-                                </button>
-
-                                <button
-                                  onClick={(e) => deleteForever(e, doc.id)}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition flex items-center gap-2"
-                                >
-                                  <Trash2 size={13} />
-                                  Delete Forever
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {viewMode === "grid" && (
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-slate-900 text-base group-hover:text-blue-600 line-clamp-1 transition-colors">
-                          {doc.title}
-                        </h3>
-
-                        {doc.is_favorite && (
-                          <Star
-                            size={15}
-                            className="text-yellow-500 fill-yellow-400"
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between mt-2.5">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            Updated {new Date(doc.updated_at).toLocaleString()}
-                          </span>
-
-                          <span className="h-1 w-1 bg-slate-300 rounded-full" />
-
-                          {doc.is_trashed ? (
-                            <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded-md border border-red-200">
-                              Trashed
-                            </span>
-                          ) : (
-                            <span className="text-[10px] bg-slate-50 text-slate-500 font-bold px-2 py-0.5 rounded-md border border-slate-200/60">
-                              Owner
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex -space-x-2">
-                          {collaboratorColors.map((color, i) => (
-                            <div
-                              key={i}
-                              className={`h-6 w-6 rounded-full ${color} border-2 border-white`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {filteredAndSortedDocuments.length === 0 && documents.length > 0 && (
-              <div className="text-center py-16 bg-white border border-slate-200/60 rounded-2xl mt-4">
-                <Search size={28} className="mx-auto mb-2 text-slate-300" />
-                <h3 className="font-bold text-slate-700 text-base">
-                  No documents found
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  This section is empty or no result matches your search.
-                </p>
-              </div>
-            )}
-
-            {documents.length === 0 && (
-              <div className="text-center py-20 bg-white border border-dashed border-slate-200 rounded-2xl mt-4">
-                <FileText size={28} className="mx-auto mb-3 text-slate-300" />
-                <h3 className="font-bold text-slate-700 text-base">
-                  No documents yet
-                </h3>
-                <p className="text-xl text-slate-400 mt-1 mb-4">
-                  Create your first document to get started
-                </p>
-
-                <button
-                  onClick={createDocument}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold w-45 h-10 px-4 py-2.5 rounded-xl transition"
-                >
-                  <Plus size={14} strokeWidth={2.5} />
-                  New Document
-                </button>
-              </div>
-            )}
-          </main>
-
-          {pageType !== "trash" && (
+      {/* Empty state */}
+      {filteredDocs.length === 0 && (
+        <div className="border border-dashed border-[#E6E4DD] rounded-xl p-12 text-center">
+          <p className="text-sm font-medium text-[#12141C] mb-1">
+            {search
+              ? "No documents match your search."
+              : mode === "trash"
+              ? "Trash is empty."
+              : mode === "favorites"
+              ? "No favorites yet."
+              : "No documents yet."}
+          </p>
+          {mode === "all" && !search && (
             <button
-              onClick={createDocument}
-              className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-3.5 rounded-full shadow-lg shadow-blue-500/30 flex items-center space-x-2 transition-all active:scale-[0.98] z-40 group"
+              onClick={() => navigate("/editor/new")}
+              className="text-sm text-[#3D5AFE] font-medium hover:underline"
             >
-              <Plus
-                size={16}
-                strokeWidth={2.5}
-                className="group-hover:rotate-90 transition-transform duration-200"
-              />
-              <span>New Document</span>
+              Create your first document
             </button>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Grid view */}
+      {filteredDocs.length > 0 && view === "grid" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredDocs.map((doc) => (
+            <div
+              key={doc.id}
+              className="relative bg-white border border-[#E6E4DD] rounded-xl p-4 hover:border-[#3D5AFE]/40 hover:shadow-sm transition"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-8 h-8 rounded-md bg-[#EEF1FF] flex items-center justify-center text-sm">
+                  📄
+                </div>
+                <div className="flex items-center gap-1">
+                  {doc.isFavorite && <span className="text-[#F5A524] text-sm">★</span>}
+                  <button
+                    onClick={() => setOpenMenuId(openMenuId === doc.id ? null : doc.id)}
+                    className="text-[#9CA3AF] hover:text-[#12141C] px-1"
+                    aria-label="Document actions"
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </div>
+
+              {renamingId === doc.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => commitRename(doc)}
+                  onKeyDown={(e) => e.key === "Enter" && commitRename(doc)}
+                  className="w-full text-sm font-medium text-[#12141C] border border-[#3D5AFE] rounded px-1.5 py-0.5 mb-1 outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => navigate(`/editor/${doc.id}`)}
+                  className="text-left w-full text-sm font-medium text-[#12141C] mb-1 truncate hover:text-[#3D5AFE]"
+                >
+                  {doc.title}
+                </button>
+              )}
+              <p className="text-xs text-[#9CA3AF]">{timeAgo(doc.updatedAt)}</p>
+
+              {openMenuId === doc.id && (
+                <div className="absolute right-3 top-12 z-10 bg-white border border-[#E6E4DD] rounded-lg shadow-md py-1 w-40 text-sm">
+                  {mode === "trash" ? (
+                    <>
+                      <button
+                        onClick={() => restoreDoc(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => deleteForever(doc.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#FEF3F2] text-[#B42318]"
+                      >
+                        Delete forever
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => navigate(`/editor/${doc.id}`)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => startRename(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => toggleFavorite(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        {doc.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      </button>
+                      <button
+                        onClick={() => moveToTrash(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#FEF3F2] text-[#B42318]"
+                      >
+                        Move to trash
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* List view */}
+      {filteredDocs.length > 0 && view === "list" && (
+        <div className="border border-[#E6E4DD] rounded-xl overflow-hidden">
+          {filteredDocs.map((doc, i) => (
+            <div
+              key={doc.id}
+              className={`relative flex items-center justify-between px-4 py-3 bg-white hover:bg-[#FAFAF7] transition ${
+                i !== 0 ? "border-t border-[#E6E4DD]" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span className="text-sm">📄</span>
+                {renamingId === doc.id ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => commitRename(doc)}
+                    onKeyDown={(e) => e.key === "Enter" && commitRename(doc)}
+                    className="text-sm font-medium text-[#12141C] border border-[#3D5AFE] rounded px-1.5 py-0.5 outline-none"
+                  />
+                ) : (
+                  <button
+                    onClick={() => navigate(`/editor/${doc.id}`)}
+                    className="text-sm font-medium text-[#12141C] truncate hover:text-[#3D5AFE]"
+                  >
+                    {doc.title}
+                  </button>
+                )}
+                {doc.isFavorite && <span className="text-[#F5A524] text-xs">★</span>}
+              </div>
+
+              <div className="flex items-center gap-4 shrink-0">
+                <span className="text-xs text-[#9CA3AF]">{timeAgo(doc.updatedAt)}</span>
+                <button
+                  onClick={() => setOpenMenuId(openMenuId === doc.id ? null : doc.id)}
+                  className="text-[#9CA3AF] hover:text-[#12141C] px-1"
+                  aria-label="Document actions"
+                >
+                  ⋯
+                </button>
+              </div>
+
+              {openMenuId === doc.id && (
+                <div className="absolute right-4 top-12 z-10 bg-white border border-[#E6E4DD] rounded-lg shadow-md py-1 w-40 text-sm">
+                  {mode === "trash" ? (
+                    <>
+                      <button
+                        onClick={() => restoreDoc(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => deleteForever(doc.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#FEF3F2] text-[#B42318]"
+                      >
+                        Delete forever
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => navigate(`/editor/${doc.id}`)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => startRename(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => toggleFavorite(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0] text-[#12141C]"
+                      >
+                        {doc.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      </button>
+                      <button
+                        onClick={() => moveToTrash(doc)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#FEF3F2] text-[#B42318]"
+                      >
+                        Move to trash
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-export default Documents;
