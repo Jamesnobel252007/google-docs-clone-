@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'users',
     'documents',
     'channels',
-    'comments',
+    
     'collaboration',
     
 ]

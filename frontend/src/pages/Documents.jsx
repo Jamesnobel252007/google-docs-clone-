@@ -2,32 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-// TEMP MOCK — swap for real API calls once your friend's backend is ready.
-// Expected endpoints:
-//   GET    /api/documents/                 -> list all (non-trashed) docs
-//   PATCH  /api/documents/:id/             -> rename, { title }
-//   PATCH  /api/documents/:id/favorite/    -> toggle favorite, { isFavorite }
-//   PATCH  /api/documents/:id/trash/       -> move to trash, { isTrashed: true }
-//   PATCH  /api/documents/:id/restore/     -> restore from trash, { isTrashed: false }
-//   DELETE /api/documents/:id/             -> permanently delete (only from trash)
-const USE_MOCK = true;
+import api from "../api/api";
 
-const MOCK_DOCS = [
-  { id: 1, title: "Getting started", updatedAt: "2026-07-04T10:20:00Z", isFavorite: true, isTrashed: false },
-  { id: 2, title: "Client proposal draft", updatedAt: "2026-07-03T15:45:00Z", isFavorite: false, isTrashed: false },
-  { id: 3, title: "Team notes — sprint 4", updatedAt: "2026-07-02T09:10:00Z", isFavorite: true, isTrashed: false },
-  { id: 4, title: "Product brief v2", updatedAt: "2026-06-30T18:00:00Z", isFavorite: false, isTrashed: false },
-  { id: 5, title: "Old meeting notes", updatedAt: "2026-06-20T11:00:00Z", isFavorite: false, isTrashed: true },
-  { id: 6, title: "Draft — unused", updatedAt: "2026-06-18T08:30:00Z", isFavorite: false, isTrashed: true },
-];
 
-async function fetchDocuments() {
-  if (USE_MOCK) {
-    return new Promise((resolve) => setTimeout(() => resolve(MOCK_DOCS), 300));
+async function fetchDocuments(mode) {
+  let url = "documents/";
+
+  if (mode === "favorites") {
+    url += "?filter=favorites";
+  } else if (mode === "trash") {
+    url += "?filter=trash";
   }
-  const res = await fetch("/api/documents/");
-  if (!res.ok) throw new Error("Couldn't load documents.");
-  return res.json();
+
+  const response = await api.get(url);
+
+  return response.data.map((doc) => ({
+    id: doc.id,
+    title: doc.title,
+    updatedAt: doc.updated_at,
+    isFavorite: doc.is_favorite,
+    isTrashed: doc.is_trashed,
+  }));
 }
 
 function timeAgo(dateString) {
@@ -48,8 +43,8 @@ export default function Documents() {
   const mode = location.pathname.includes("/favorites")
     ? "favorites"
     : location.pathname.includes("/trash")
-    ? "trash"
-    : "all";
+      ? "trash"
+      : "all";
 
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,11 +57,16 @@ export default function Documents() {
   const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
-    fetchDocuments()
+    setLoading(true);
+
+    fetchDocuments(mode)
       .then(setDocs)
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load documents.");
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [mode]);
 
   const filteredDocs = useMemo(() => {
     let result = docs.filter((d) =>
@@ -87,28 +87,95 @@ export default function Documents() {
     return result;
   }, [docs, mode, search, sortOrder]);
 
-  const updateDoc = (id, changes) => {
-    // Swap this for the matching PATCH/DELETE call for each action.
-    setDocs((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
+  const updateDoc = async (id, changes) => {
+    try {
+      await api.patch(`documents/${id}/`, changes);
+
+      setDocs((prev) =>
+        prev.map((doc) =>
+          doc.id === id
+            ? {
+              ...doc,
+              ...changes,
+            }
+            : doc
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const deleteForever = (id) => {
-    setDocs((prev) => prev.filter((d) => d.id !== id));
+  const deleteForever = async (id) => {
+    try {
+      await api.delete(`documents/${id}/delete_forever/`);
+
+      setDocs((prev) => prev.filter((doc) => doc.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const toggleFavorite = async (doc) => {
+    try {
+      const res = await api.patch(`documents/${doc.id}/favorite/`);
+
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? {
+              ...d,
+              isFavorite: res.data.is_favorite,
+            }
+            : d
+        )
+      );
+
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const toggleFavorite = (doc) => {
-    updateDoc(doc.id, { isFavorite: !doc.isFavorite });
-    setOpenMenuId(null);
+  const moveToTrash = async (doc) => {
+    try {
+      await api.patch(`documents/${doc.id}/trash/`);
+
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? {
+              ...d,
+              isTrashed: true,
+            }
+            : d
+        )
+      );
+
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const moveToTrash = (doc) => {
-    updateDoc(doc.id, { isTrashed: true });
-    setOpenMenuId(null);
-  };
+  const restoreDoc = async (doc) => {
+    try {
+      await api.patch(`documents/${doc.id}/restore/`);
 
-  const restoreDoc = (doc) => {
-    updateDoc(doc.id, { isTrashed: false });
-    setOpenMenuId(null);
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? {
+              ...d,
+              isTrashed: false,
+            }
+            : d
+        )
+      );
+
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const startRename = (doc) => {
@@ -117,10 +184,34 @@ export default function Documents() {
     setOpenMenuId(null);
   };
 
-  const commitRename = (doc) => {
+  const commitRename = async (doc) => {
     const trimmed = renameValue.trim();
-    if (trimmed) updateDoc(doc.id, { title: trimmed });
-    setRenamingId(null);
+
+    if (!trimmed) {
+      setRenamingId(null);
+      return;
+    }
+
+    try {
+      await api.patch(`documents/${doc.id}/`, {
+        title: trimmed,
+      });
+
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? {
+              ...d,
+              title: trimmed,
+            }
+            : d
+        )
+      );
+
+      setRenamingId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const pageTitle =
@@ -130,8 +221,8 @@ export default function Documents() {
     mode === "favorites"
       ? "Documents you've starred."
       : mode === "trash"
-      ? "Items here are removed after 30 days."
-      : "All your documents in one place.";
+        ? "Items here are removed after 30 days."
+        : "All your documents in one place.";
 
   if (loading) {
     return (
@@ -197,17 +288,15 @@ export default function Documents() {
         <div className="flex border border-[#E6E4DD] rounded-lg overflow-hidden">
           <button
             onClick={() => setView("grid")}
-            className={`px-3 py-2 text-sm ${
-              view === "grid" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
-            }`}
+            className={`px-3 py-2 text-sm ${view === "grid" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
+              }`}
           >
             Grid
           </button>
           <button
             onClick={() => setView("list")}
-            className={`px-3 py-2 text-sm border-l border-[#E6E4DD] ${
-              view === "list" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
-            }`}
+            className={`px-3 py-2 text-sm border-l border-[#E6E4DD] ${view === "list" ? "bg-[#EEF1FF] text-[#3D5AFE]" : "bg-white text-[#6B7280]"
+              }`}
           >
             List
           </button>
@@ -221,10 +310,10 @@ export default function Documents() {
             {search
               ? "No documents match your search."
               : mode === "trash"
-              ? "Trash is empty."
-              : mode === "favorites"
-              ? "No favorites yet."
-              : "No documents yet."}
+                ? "Trash is empty."
+                : mode === "favorites"
+                  ? "No favorites yet."
+                  : "No documents yet."}
           </p>
           {mode === "all" && !search && (
             <button
@@ -338,9 +427,8 @@ export default function Documents() {
           {filteredDocs.map((doc, i) => (
             <div
               key={doc.id}
-              className={`relative flex items-center justify-between px-4 py-3 bg-white hover:bg-[#FAFAF7] transition ${
-                i !== 0 ? "border-t border-[#E6E4DD]" : ""
-              }`}
+              className={`relative flex items-center justify-between px-4 py-3 bg-white hover:bg-[#FAFAF7] transition ${i !== 0 ? "border-t border-[#E6E4DD]" : ""
+                }`}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <span className="text-sm">📄</span>

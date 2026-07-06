@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import api from "../api/api";
 
 const STORAGE_KEY = "vdocsProfile";
 const THEME_KEY = "vdocsTheme";
@@ -41,9 +42,24 @@ export default function SettingsAlt() {
   };
 
   useEffect(() => {
-    setProfile(loadJSON(STORAGE_KEY, DEFAULT_PROFILE));
-    setTheme(localStorage.getItem(THEME_KEY) || "light");
-    setNotifs(loadJSON(NOTIF_KEY, DEFAULT_NOTIFS));
+    async function loadProfile() {
+      try {
+        const res = await api.get("me/");
+
+setProfile({
+    name: res.data.username,
+    email: res.data.email,
+    bio: "",
+});
+
+        setTheme(localStorage.getItem(THEME_KEY) || "light");
+        setNotifs(loadJSON(NOTIF_KEY, DEFAULT_NOTIFS));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadProfile();
   }, []);
 
   useEffect(() => {
@@ -57,12 +73,22 @@ export default function SettingsAlt() {
     sectionRefs[id].current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const saveProfile = (e) => {
-    e.preventDefault();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    setSaved(true);
-  };
+const saveProfile = async (e) => {
+  e.preventDefault();
 
+  try {
+    await api.patch("me/", {
+    username: profile.name,
+    email: profile.email,
+});
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+
+    setSaved(true);
+  } catch (err) {
+    console.error(err);
+  }
+};
   const selectTheme = (value) => {
     setTheme(value);
     localStorage.setItem(THEME_KEY, value);
@@ -86,11 +112,10 @@ export default function SettingsAlt() {
             <button
               key={s.id}
               onClick={() => scrollToSection(s.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                activeSection === s.id
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${activeSection === s.id
                   ? "bg-[#EFEBFB] text-[#6D5BD0] font-medium"
                   : "text-[#5B5768] hover:bg-[#F5F4F8]"
-              }`}
+                }`}
             >
               {s.label}
             </button>
@@ -184,11 +209,10 @@ export default function SettingsAlt() {
               <button
                 key={option.id}
                 onClick={() => selectTheme(option.id)}
-                className={`rounded-xl border-2 p-3 text-left transition ${
-                  theme === option.id
+                className={`rounded-xl border-2 p-3 text-left transition ${theme === option.id
                     ? "border-[#6D5BD0]"
                     : "border-[#E4E1EC] hover:border-[#C7C2D6]"
-                }`}
+                  }`}
               >
                 <div
                   className="w-full h-14 rounded-lg mb-2.5 border border-[#E4E1EC]"
@@ -234,9 +258,8 @@ export default function SettingsAlt() {
             ].map((item, i) => (
               <div
                 key={item.key}
-                className={`flex items-start justify-between py-4 ${
-                  i !== 0 ? "border-t border-[#EDEBF2]" : ""
-                }`}
+                className={`flex items-start justify-between py-4 ${i !== 0 ? "border-t border-[#EDEBF2]" : ""
+                  }`}
               >
                 <div className="pr-4">
                   <p className="text-sm font-medium text-[#232231]">{item.label}</p>
@@ -246,14 +269,12 @@ export default function SettingsAlt() {
                   onClick={() => toggleNotif(item.key)}
                   role="switch"
                   aria-checked={notifs[item.key]}
-                  className={`relative w-10 h-6 rounded-full shrink-0 transition ${
-                    notifs[item.key] ? "bg-[#6D5BD0]" : "bg-[#E4E1EC]"
-                  }`}
+                  className={`relative w-10 h-6 rounded-full shrink-0 transition ${notifs[item.key] ? "bg-[#6D5BD0]" : "bg-[#E4E1EC]"
+                    }`}
                 >
                   <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                      notifs[item.key] ? "translate-x-4" : "translate-x-0"
-                    }`}
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${notifs[item.key] ? "translate-x-4" : "translate-x-0"
+                      }`}
                   />
                 </button>
               </div>
