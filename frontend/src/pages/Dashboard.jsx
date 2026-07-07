@@ -1,36 +1,57 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate} from "react-router-dom";
+import api from "../api/api";
+import Header from '../components/Header';
+import Sidebar from "../components/Sidebar";
 // TEMP MOCK — swap this for a real API call once your friend's backend is ready.
 // Expected shape from backend: GET /api/dashboard/
 //   { stats: { totalDocs, sharedDocs, favoriteDocs, storageUsedMB, storageLimitMB },
 //     recentDocuments: [{ id, title, updatedAt, isFavorite, isShared, owner }] }
-const USE_MOCK = true;
 
-const MOCK_DASHBOARD = {
-  stats: {
-    totalDocs: 14,
-    sharedDocs: 5,
-    favoriteDocs: 3,
-    storageUsedMB: 42,
-    storageLimitMB: 500,
-  },
-  recentDocuments: [
-    { id: 1, title: "Getting started", updatedAt: "2026-07-04T10:20:00Z", isFavorite: true, isShared: false },
-    { id: 2, title: "Client proposal draft", updatedAt: "2026-07-03T15:45:00Z", isFavorite: false, isShared: true },
-    { id: 3, title: "Team notes — sprint 4", updatedAt: "2026-07-02T09:10:00Z", isFavorite: true, isShared: true },
-    { id: 4, title: "Product brief v2", updatedAt: "2026-06-30T18:00:00Z", isFavorite: false, isShared: false },
-  ],
-};
+
 
 async function fetchDashboardData() {
-  if (USE_MOCK) {
-    return new Promise((resolve) => setTimeout(() => resolve(MOCK_DASHBOARD), 300));
-  }
-  const res = await fetch("/api/dashboard/");
-  if (!res.ok) throw new Error("Couldn't load dashboard data.");
-  return res.json();
+  const { data: documents } = await api.get("documents/");
+
+  const activeDocuments = documents.filter((doc) => !doc.is_trashed);
+
+  const stats = {
+    totalDocs: activeDocuments.length,
+
+    favoriteDocs: activeDocuments.filter(
+      (doc) => doc.is_favorite
+    ).length,
+
+    // Until you have a dedicated shared endpoint
+    sharedDocs: activeDocuments.filter(
+      (doc) => doc.owner !== null
+    ).length,
+
+    storageUsedMB: 0,
+    storageLimitMB: 500,
+  };
+
+  const recentDocuments = activeDocuments
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at) -
+        new Date(a.updated_at)
+    )
+    .slice(0, 4)
+    .map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      updatedAt: doc.updated_at,
+      isFavorite: doc.is_favorite,
+      isShared: doc.owner !== null,
+    }));
+
+  return {
+    stats,
+    recentDocuments,
+  };
 }
+
 
 function timeAgo(dateString) {
   const diffMs = Date.now() - new Date(dateString).getTime();
@@ -43,11 +64,13 @@ function timeAgo(dateString) {
   return new Date(dateString).toLocaleDateString();
 }
 
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardData()
@@ -61,30 +84,44 @@ export default function Dashboard() {
     navigate("/editor/new");
   };
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="h-8 w-48 bg-[#F1EFE8] rounded animate-pulse mb-3" />
-        <div className="h-4 w-72 bg-[#F1EFE8] rounded animate-pulse mb-8" />
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-[#F1EFE8] rounded-xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen bg-[#FAFAF7] flex">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="bg-[#FEF3F2] border border-[#FDA29B] text-[#B42318] text-sm rounded-lg px-4 py-3 max-w-md">
-          {error}
-        </div>
-      </div>
-    );
-  }
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
 
+        <main className="flex-1">
+          {loading ? (
+            <div className="p-8">
+              <div className="h-8 w-48 bg-[#F1EFE8] rounded animate-pulse mb-3" />
+              <div className="h-4 w-72 bg-[#F1EFE8] rounded animate-pulse mb-8" />
+              <div className="grid grid-cols-4 gap-4 mb-8">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="h-24 bg-[#F1EFE8] rounded-xl animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ) : error ? (
+            <div className="p-8">
+              <div className="bg-[#FEF3F2] border border-[#FDA29B] text-[#B42318] text-sm rounded-lg px-4 py-3 max-w-md">
+                {error}
+              </div>
+            </div>
+          ) : (
+            <DashboardContent
+              data={data}
+              navigate={navigate}
+              handleCreateDocument={handleCreateDocument}
+            />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function DashboardContent({ data, navigate, handleCreateDocument }) {
   const { stats, recentDocuments } = data;
   const storagePercent = Math.round((stats.storageUsedMB / stats.storageLimitMB) * 100);
 

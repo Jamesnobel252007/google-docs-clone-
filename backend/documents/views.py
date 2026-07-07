@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from .models import Document
 from .serializers import DocumentSerializer
-
+from collaboration.models import Collaborator
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
@@ -90,7 +90,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     # ---------------- COLLABORATORS ----------------
 
-    from collaboration.models import Collaborator
+
 
     @action(detail=True, methods=["get"])
     def collaborators(self, request, pk=None):

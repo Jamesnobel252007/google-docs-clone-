@@ -5,6 +5,7 @@ from django.contrib import admin
 from documents.views import shared_to_me, shared_by_me
 from documents.views import DocumentViewSet
 
+
 router = DefaultRouter()
 router.register(r"documents", DocumentViewSet, basename="documents")
 
@@ -15,6 +16,7 @@ urlpatterns = [
 
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),
+    path("api/comments/", include("comments.urls")),
 path("api/", include("collaboration.urls")),
     # IMPORTANT: ONLY ONE API ROUTER ENTRY
     path("api/", include(router.urls)),
