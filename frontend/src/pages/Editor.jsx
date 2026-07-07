@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import TiptapEditor from "../components/TiptapEditor";
 import api from "../api/api";
+import html2pdf from "html2pdf.js";
 
 const WS_BASE = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:8000";
 
@@ -41,8 +42,6 @@ function Editor() {
     }
   }, [id, isNewDoc]);
 
-  // Create a fresh document when arriving via /editor/new, then swap the
-  // URL to the real id so refresh, sharing, and the WebSocket all work.
   useEffect(() => {
     const createNewDocument = async () => {
       try {
@@ -75,7 +74,9 @@ function Editor() {
         await loadCollaborators();
       } catch (err) {
         console.error(err);
-        setLoadError("Couldn't load this document. It may have been removed, or you may not have access.");
+        setLoadError(
+          "Couldn't load this document. It may have been removed, or you may not have access."
+        );
       } finally {
         setLoadingDoc(false);
       }
@@ -186,18 +187,62 @@ function Editor() {
   };
 
   const exportDocument = (type) => {
-    switch (type) {
-      case "html":
-        alert("HTML export coming soon.");
-        break;
-      case "csv":
-        alert("CSV export coming soon.");
-        break;
-      case "excel":
-        alert("Excel export coming soon.");
-        break;
-      default:
-        break;
+    const safeTitle = (title || "document").replace(/[^a-z0-9\-_ ]/gi, "").trim() || "document";
+
+    if (type === "html") {
+      const htmlDoc = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${title}</title>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+
+      const blob = new Blob([htmlDoc], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeTitle}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (type === "pdf") {
+      const container = document.createElement("div");
+      container.innerHTML = content;
+      container.style.padding = "40px";
+      container.style.fontFamily = "Arial, sans-serif";
+      container.style.color = "#1e293b";
+      container.style.lineHeight = "1.7";
+      container.style.fontSize = "14px";
+
+      const tableEls = container.querySelectorAll("table");
+      tableEls.forEach((t) => {
+        t.style.borderCollapse = "collapse";
+        t.style.width = "100%";
+      });
+      const cellEls = container.querySelectorAll("td, th");
+      cellEls.forEach((c) => {
+        c.style.border = "1px solid #cbd5e1";
+        c.style.padding = "6px 10px";
+      });
+
+      html2pdf()
+        .set({
+          margin: 10,
+          filename: `${safeTitle}.pdf`,
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(container)
+        .save();
+      return;
     }
   };
 
@@ -205,6 +250,7 @@ function Editor() {
     if (!window.confirm("Remove this collaborator from this document?")) {
       return;
     }
+
     try {
       await api.delete(`documents/${id}/remove-collaborator/${userId}/`);
       setCollaborators((prev) => prev.filter((user) => user.id !== userId));
@@ -223,25 +269,42 @@ function Editor() {
     }
   };
 
+  const statusTone =
+    status === "Saved"
+      ? "text-teal-700"
+      : status === "Couldn't save"
+        ? "text-rose-600"
+        : "text-amber-600";
+
+  const sealTone =
+    status === "Saved"
+      ? "bg-teal-600"
+      : status === "Couldn't save"
+        ? "bg-rose-500"
+        : "bg-amber-500 animate-pulse";
+
   if (loadingDoc) {
     return (
-      <div className="min-h-screen bg-[#F4F7FB] flex items-center justify-center">
-        <p className="text-slate-400 text-sm">
+      <div className="min-h-screen bg-[#EEF1F6] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-slate-500 text-sm font-mono tracking-wide">
+          <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
           {isNewDoc ? "Creating your document..." : "Loading document..."}
-        </p>
+        </div>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#F4F7FB] flex items-center justify-center">
-        <div className="bg-white border border-slate-200 rounded-xl p-8 max-w-md text-center shadow-sm">
-          <p className="text-slate-800 font-semibold mb-2">Something went wrong</p>
-          <p className="text-sm text-slate-500 mb-5">{loadError}</p>
+      <div className="min-h-screen bg-[#EEF1F6] flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md text-center shadow-[0_8px_30px_rgba(20,30,50,0.08)]">
+          <p className="text-slate-900 font-serif text-xl font-semibold mb-2">
+            Something went wrong
+          </p>
+          <p className="text-sm text-slate-500 mb-6">{loadError}</p>
           <button
             onClick={() => navigate("/documents")}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+            className="px-5 py-2.5 rounded-lg bg-[#14213D] text-white text-sm font-medium hover:bg-[#1B2A4A] transition-colors"
           >
             Back to documents
           </button>
@@ -251,169 +314,209 @@ function Editor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
-        {/* Left */}
-        <div className="flex items-center gap-5">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition"
-          >
-            ←
-          </button>
-
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
-            📄
-          </div>
-
-          <div>
-            <input
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                setStatus("Unsaved changes");
-              }}
-              className="text-2xl font-bold bg-transparent outline-none border-none text-slate-800"
-            />
-
-            <p
-              className={`text-xs mt-1 font-medium ${
-                status === "Saved" ? "text-emerald-500" : "text-orange-500"
-              }`}
+    <div className="min-h-screen bg-[#EEF1F6]">
+      {/* Letterhead */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-3">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/documents")}
+              className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 text-lg transition-colors"
+              aria-label="Back to documents"
             >
-              {status}
-            </p>
+              ←
+            </button>
+
+            <div className="w-10 h-10 rounded-lg bg-[#14213D] text-[#F2C879] flex items-center justify-center font-serif font-semibold text-lg">
+              §
+            </div>
+
+            <div>
+              <input
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setStatus("Unsaved changes");
+                }}
+                className="font-serif text-xl font-semibold bg-transparent outline-none text-slate-900 w-[420px] border-b border-transparent focus:border-[#0F6B5C] transition-colors pb-0.5"
+              />
+
+              <p
+                className={`text-[11px] font-mono uppercase tracking-wider mt-0.5 flex items-center gap-1.5 ${statusTone}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${sealTone}`} />
+                {status}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-3">
-          <button
-            disabled={sharing}
-            onClick={() => setShowShareModal(true)}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
-          >
-            {sharing ? "Sharing..." : "Share"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={saveDocument}
+              className="px-5 py-2.5 rounded-lg bg-[#0F6B5C] hover:bg-[#0C5449] text-white font-semibold text-sm transition-colors shadow-sm"
+            >
+              Save
+            </button>
 
-          <button
-            onClick={saveDocument}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition"
-          >
-            Save
-          </button>
+            <button
+              disabled={sharing}
+              onClick={() => setShowShareModal(true)}
+              className="px-5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors"
+            >
+              {sharing ? "Sharing..." : "Share"}
+            </button>
 
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              exportDocument(e.target.value);
-              e.target.value = "";
-            }}
-            className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm outline-none hover:bg-slate-50"
-          >
-            <option value="" disabled>
-              Export
-            </option>
-            <option value="html">HTML</option>
-            <option value="csv">CSV</option>
-            <option value="excel">Excel</option>
-          </select>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                exportDocument(e.target.value);
+                e.target.value = "";
+              }}
+              className="px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm outline-none hover:bg-slate-50 text-slate-700 transition-colors"
+            >
+              <option value="" disabled>
+                Export
+              </option>
+              <option value="html">HTML</option>
+              <option value="pdf">PDF</option>
+            </select>
 
-          <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow">
-            {currentUser?.username?.charAt(0).toUpperCase() || "U"}
+            <div className="w-9 h-9 rounded-full bg-[#14213D] text-[#F2C879] flex items-center justify-center font-serif font-semibold">
+              {currentUser?.username?.charAt(0).toUpperCase() || "U"}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Editor Body */}
       <main className="px-6 py-8">
-        <div className="max-w-[1600px] mx-auto flex gap-8 items-start">
-          {/* ================= Editor ================= */}
-          <section className="flex-1">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-lg min-h-[85vh] p-10">
-              <TiptapEditor
-                content={content}
-                setContent={setContent}
-                setStatus={setStatus}
-                socketRef={socketRef}
-                isRemote={isRemote}
-              />
+        <div className="max-w-[1600px] mx-auto grid grid-cols-[1fr_320px] gap-6">
+          <section>
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_8px_30px_rgba(20,30,50,0.06)] overflow-hidden">
+              <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div>
+                  <p className="text-sm font-serif font-semibold text-slate-800">
+                    Document Editor
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Write, format, save, and collaborate
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-slate-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+                  Live workspace
+                </div>
+              </div>
+
+              <div className="bg-[#F4F6FA] px-10 py-10">
+                <div className="mx-auto max-w-[900px] min-h-[900px] bg-white border border-slate-200 shadow-[0_2px_16px_rgba(20,30,50,0.06)] rounded-lg px-16 py-14">
+                  <TiptapEditor
+                    content={content}
+                    setContent={setContent}
+                    setStatus={setStatus}
+                    socketRef={socketRef}
+                    isRemote={isRemote}
+                    onSave={saveDocument}
+                    onExport={exportDocument}
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* ================= Sidebar ================= */}
-          <aside className="w-[340px] sticky top-24 space-y-6">
-            {/* ONLINE USERS */}
-            <div className="bg-white rounded-2xl border shadow p-6">
-              <h3 className="font-bold text-lg mb-5 flex items-center gap-2">
-                🟢 Online Users
+          <aside className="space-y-5 sticky top-24 h-fit">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <h3 className="font-serif font-semibold text-slate-900 mb-4 flex items-center gap-2 text-[15px]">
+                <span className="w-2 h-2 rounded-full bg-teal-600" />
+                Online Users
               </h3>
 
               {onlineUsers.length === 0 ? (
-                <p className="text-gray-400 text-sm">Nobody online</p>
+                <p className="text-sm text-slate-400">
+                  Nobody online right now
+                </p>
               ) : (
-                onlineUsers.map((user, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 py-3 border-b last:border-none"
-                  >
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="font-medium">{user}</span>
-                  </div>
-                ))
+                <div className="space-y-2">
+                  {onlineUsers.map((user, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2.5"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-teal-600"></span>
+                      <span className="text-sm font-medium text-slate-700">
+                        {user}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* COLLABORATORS */}
-            <div className="bg-white rounded-2xl border shadow p-6">
-              <h3 className="font-bold text-lg mb-5">👥 Collaborators</h3>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <h3 className="font-serif font-semibold text-slate-900 mb-4 text-[15px]">
+                Collaborators
+              </h3>
 
-              <div className="max-h-[500px] overflow-y-auto">
-                {collaborators.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex justify-between items-center py-4 border-b last:border-none"
-                  >
-                    <div>
-                      <div className="font-semibold">
-                        {user.username}
-                        {user.role === "owner" && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                            Owner
-                          </span>
-                        )}
-                      </div>
-
-                      {user.role !== "owner" && (
-                        <div className="text-xs text-gray-500 capitalize">
+              <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                {collaborators.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    No collaborators yet
+                  </p>
+                ) : (
+                  collaborators.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5"
+                    >
+                      <div>
+                        <p className="font-semibold text-sm text-slate-800">
+                          {user.username}
+                        </p>
+                        <p className="text-xs text-slate-500 capitalize font-mono">
                           {user.role}
-                        </div>
-                      )}
-                    </div>
-
-                    {isOwner && user.role !== "owner" ? (
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={user.role}
-                          onChange={(e) => updateRole(user.id, e.target.value)}
-                          className="border rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="viewer">Viewer</option>
-                          <option value="editor">Editor</option>
-                        </select>
-
-                        <button
-                          onClick={() => removeCollaborator(user.id)}
-                          className="text-red-600 hover:text-red-700 text-sm"
-                        >
-                          ✕
-                        </button>
+                        </p>
                       </div>
-                    ) : null}
-                  </div>
-                ))}
+
+                      {user.role === "owner" ? (
+                        <span className="text-[11px] font-mono uppercase tracking-wide bg-[#14213D] text-[#F2C879] px-2 py-1 rounded-full">
+                          Owner
+                        </span>
+                      ) : isOwner ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={user.role}
+                            onChange={(e) =>
+                              updateRole(user.id, e.target.value)
+                            }
+                            className="border rounded-md px-2 py-1 text-xs bg-white"
+                          >
+                            <option value="viewer">Viewer</option>
+                            <option value="editor">Editor</option>
+                          </select>
+
+                          <button
+                            onClick={() => removeCollaborator(user.id)}
+                            className="text-rose-500 hover:text-rose-700 text-sm"
+                            aria-label="Remove collaborator"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                )}
               </div>
+            </div>
+
+            <div className="bg-[#14213D] rounded-2xl shadow-md p-6 text-white">
+              <h3 className="font-serif font-semibold mb-2 text-[#F2C879]">
+                Workspace Tip
+              </h3>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Use Share to invite others. Real-time updates will appear when
+                WebSocket sync is active.
+              </p>
             </div>
           </aside>
         </div>
@@ -421,17 +524,19 @@ function Editor() {
 
       {showShareModal && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-[#0B1120]/50 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setShowShareModal(false)}
         >
           <div
-            className="bg-white rounded-xl w-[420px] p-6 shadow-xl"
+            className="bg-white rounded-2xl w-[440px] p-7 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-2xl font-bold text-slate-800">Share Document</h2>
+            <h2 className="text-2xl font-serif font-semibold text-slate-900">
+              Share Document
+            </h2>
 
             <p className="text-sm text-slate-500 mt-1 mb-6">
-              Invite collaborators to edit or view this document.
+              Invite people to view or edit this document.
             </p>
 
             <input
@@ -439,12 +544,13 @@ function Editor() {
               placeholder="Enter collaborator email"
               value={shareEmail}
               onChange={(e) => setShareEmail(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-[#0F6B5C] focus:border-transparent outline-none"
             />
+
             <select
               value={shareRole}
               onChange={(e) => setShareRole(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2 mb-6"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 mb-6 outline-none"
             >
               <option value="viewer">Viewer</option>
               <option value="editor">Editor</option>
@@ -453,14 +559,14 @@ function Editor() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowShareModal(false)}
-                className="px-4 py-2 rounded-lg border"
+                className="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
 
               <button
                 onClick={shareDocument}
-                className="px-5 py-2 rounded-lg bg-blue-600 text-white"
+                className="px-5 py-2 rounded-lg bg-[#0F6B5C] hover:bg-[#0C5449] text-white font-semibold transition-colors"
               >
                 Share
               </button>
