@@ -6,7 +6,8 @@ import api from "../api/api";
 function Trash() {
     const [docs, setDocs] = useState([]);
     const [loading, setLoading] = useState(true);
-
+      const [search, setSearch] = useState("");
+      
     const fetchTrash = async () => {
         try {
             setLoading(true);
@@ -69,7 +70,10 @@ function Trash() {
             <Sidebar />
 
             <div className="flex-1 flex flex-col">
-                <Header />
+                <Header
+    search={search}
+    setSearch={setSearch}
+/>
 
                 <main className="p-8 max-w-7xl mx-auto w-full">
                     <h1 className="text-3xl font-bold mb-4">Trash</h1>

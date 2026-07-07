@@ -176,7 +176,10 @@ export default function Documents() {
 
       {/* Right side: header on top, page content below */}
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+       <Header
+    search={search}
+    setSearch={setSearch}
+/>
 
         <main className="flex-1 p-8 max-w-6xl w-full">
           <div className="flex items-start justify-between mb-6">

@@ -71,7 +71,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const [search, setSearch] = useState("");
   useEffect(() => {
     fetchDashboardData()
       .then(setData)
@@ -89,7 +89,8 @@ export default function Dashboard() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={() => setSidebarOpen(true)} search={search}
+    setSearch={setSearch}/>
 
         <main className="flex-1">
           {loading ? (

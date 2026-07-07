@@ -36,8 +36,30 @@
 // };
 
 // export default Header;
+import { useState, useEffect } from "react";
+import api from "../api/api";
 
-function Header({ onMenuClick, userName = "Alex" }) {
+function Header({
+  onMenuClick,
+  search = "",
+  setSearch = () => { },
+}) {
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const res = await api.get("user/");
+        setCurrentUser(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
+
   return (
     <header className="h-16 flex items-center justify-between gap-4 px-4 lg:px-8 border-b border-[#E6E4DD] bg-white sticky top-0 z-20">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -62,6 +84,8 @@ function Header({ onMenuClick, userName = "Alex" }) {
           <input
             type="text"
             placeholder="Search documents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-[#E6E4DD] bg-[#FAFAF7] text-[#12141C] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3D5AFE]/30 focus:border-[#3D5AFE]"
           />
         </div>
@@ -84,9 +108,9 @@ function Header({ onMenuClick, userName = "Alex" }) {
 
         <div className="flex items-center gap-2 pl-3 border-l border-[#E6E4DD]">
           <div className="w-8 h-8 rounded-full bg-[#3D5AFE] flex items-center justify-center text-white text-xs font-semibold">
-            {userName.charAt(0)}
+            {currentUser?.username?.charAt(0).toUpperCase() || "U"}
           </div>
-          <span className="hidden sm:block text-sm font-medium text-[#12141C]">{userName}</span>
+
         </div>
       </div>
     </header>
